@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>{{ title }}: ATLAS pre-filter</title>
+<link rel="icon" href="/static/public/img/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/static/public/css/pfd.css">
+</head>
+<body data-page="{{ page }}" data-mode="{{ mode }}">
+<div class="sheet">
+{% include "_sheet.html" %}
+<div id="idle" class="banner warn hidden" role="status">
+  Signing out after inactivity in <b id="idle-left">10:00</b>. Unsaved work is discarded.
+  <button id="idle-stay" type="button">Stay signed in</button>
+</div>
+<div class="frame">
+  <nav class="plates" aria-label="Pages">
+    <div class="brand">ATLAS<br>PRE-FILTER<span>gate and EDA, mk4</span></div>
+    {% for key, href, label in pages %}
+    <a href="{{ href }}"{% if key == page %} aria-current="page"{% endif %}>{{ label }}</a>
+    {% endfor %}
+    <form method="post" action="/logout"><button type="submit" class="link">Sign out</button></form>
+  </nav>
+  <main>
+    <h1>{{ title }}</h1>
+    {% block main %}{% endblock %}
+  </main>
+</div>
+<aside class="titleblock" aria-label="Sheet provenance">
+  <div class="t"><b>ATLAS PRE-FILTER DASH</b><em id="tb-mode">{{ mode|upper }}</em></div>
+  <div class="c"><span>SHEET</span><strong>{{ title }}</strong></div>
+  <div class="c"><span>RUNS SIGNED</span><strong id="tb-who">—</strong></div>
+  <div class="c end"><span>STATE</span><strong id="tb-state">—</strong></div>
+  <div class="c"><span>BARREL DATA</span><strong id="tb-barrel">—</strong></div>
+  <div class="c"><span>ENDCAP DATA</span><strong id="tb-endcap">—</strong></div>
+  <div class="c end"><span>ACTIVE LIST</span><strong id="tb-list">—</strong></div>
+  <div class="c last"><span>REFERENCE</span><strong id="tb-ref">—</strong></div>
+  <div class="c last"><span>SIGN-OUT IN</span><strong id="tb-idle">—</strong></div>
+  <div class="c end last"><span>REV</span><strong id="tb-rev">mk4</strong></div>
+</aside>
+</div>
+<script src="/static/app/js/common.js"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

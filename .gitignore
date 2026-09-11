@@ -1,0 +1,42 @@
+# --- secrets -------------------------------------------------------------
+.env
+*.key
+*.pem
+
+# --- data: never committed (canon C3) -------------------------------------
+data/
+*.csv
+*.root
+*.parquet
+*.npz
+*.npy
+*.h5
+*.hdf5
+locations*.txt
+!docs/**/*.csv
+
+# --- runtime state ---------------------------------------------------------
+store/
+cache/
+scratch/
+sessions/
+*.pfd.zip
+logs/
+*.log
+
+# --- python ----------------------------------------------------------------
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+*.egg-info/
+
+# --- editors / os ----------------------------------------------------------
+.vscode/
+.idea/
+Thumbs.db
+desktop.ini
+.DS_Store
+*locations*.txt
+out/

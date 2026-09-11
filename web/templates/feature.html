@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block main %}
+<div id="empty" class="banner hidden"></div>
+<div id="card" class="hidden">
+  <div class="row">
+    <div>
+      <p class="lede"><b id="fname"></b> <span id="fregion" class="muted"></span> <span id="fverdict"></span> <span id="fnet" class="chip hidden"></span></p>
+    </div>
+    <div class="small">
+      <button type="button" id="prev">Previous column</button>
+      <button type="button" id="next">Next column</button>
+      <a class="btn" id="back" href="/board">Back to board</a>
+    </div>
+  </div>
+  <div id="fstatus"></div>
+  <section class="panel">
+    <h2>Verdict</h2>
+    <ul id="reasons" class="small"></ul>
+    <ul id="notes" class="small muted"></ul>
+  </section>
+  <section class="panel">
+    <h2>S7 histograms</h2>
+    <div class="ctl small">
+      <label><input type="checkbox" id="norm" checked> Normalise each sample</label>
+      <span class="muted" id="histnote"></span>
+    </div>
+    <p class="small muted">Linear and log y side by side: log alone hides a collapsed spike, linear alone hides the tails where the A quadrant lives. Dashed line: background median.</p>
+    <div class="row">
+      <div><canvas class="chart" id="hist" aria-label="Histogram, linear y"></canvas></div>
+      <div><canvas class="chart" id="histlog" aria-label="Histogram, log y"></canvas></div>
+    </div>
+    <div class="legend" id="legend"></div>
+  </section>
+  <section class="panel">
+    <h2>S7 box plots</h2>
+    <canvas class="chart box" id="box" aria-label="Box plots per sample"></canvas>
+    <p class="small muted" id="boxnote"></p>
+  </section>
+  <div class="row">
+    <section class="panel">
+      <h2>S2 missingness and sentinels</h2>
+      <table class="small"><thead><tr><th>Sample</th><th class="num">n</th><th class="num">NaN</th><th class="num">inf</th><th>Sentinels</th><th class="num">Invalid</th></tr></thead><tbody id="s2"></tbody></table>
+      <h2 class="small">Sentinel candidates</h2>
+      <p class="small muted">Candidates are reported, never masked, until ruled. Re-run the gate to apply a ruling.</p>
+      <table class="small"><thead><tr><th class="num">Value</th><th>Seen in</th><th>Ruling</th><th></th></tr></thead><tbody id="cands"></tbody></table>
+    </section>
+    <section class="panel">
+      <h2>S13 leakage</h2>
+      <table class="small"><tbody id="s13"></tbody></table>
+      <h2 class="small">S3 / S4 / S5</h2>
+      <table class="small"><tbody id="s345"></tbody></table>
+    </section>
+  </div>
+  <section class="panel">
+    <h2>S9 span audit</h2>
+    <p class="small" id="s9src"></p>
+    <table class="small"><thead><tr><th>Scaler</th><th class="num">Entropy (bits)</th><th class="num">Realised</th><th class="num">Central span</th><th class="num">Eff. resolution</th><th>Clips</th><th>Status</th></tr></thead><tbody id="s9"></tbody></table>
+    <p class="small muted">Realised = entropy on a fixed 256-bin grid ÷ the column's achievable ceiling. Below 50% the scaler is crushing the column. There is no "best scaler": a rank transform tops any entropy ranking by construction.</p>
+  </section>
+  <section class="panel">
+    <h2>S6 statistics and tails</h2>
+    <div class="tablewrap"><table class="small" id="s6"><thead></thead><tbody></tbody></table></div>
+    <p class="small muted">Tail ratio = fraction beyond median ± 3·1.4826·MAD divided by the Gaussian fraction beyond 3σ (0.135%). 1 is Gaussian-like; well above 1 is a heavy tail.</p>
+  </section>
+</div>
+{% endblock %}
+{% block scripts %}<script src="/static/app/js/charts.js"></script><script src="/static/app/js/feature.js"></script>{% endblock %}

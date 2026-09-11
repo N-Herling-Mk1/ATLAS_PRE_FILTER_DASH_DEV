@@ -1,0 +1,87 @@
+/* The gate: sign-in page. An event display: black space, the detector drawn on
+   #det, the sign-in plate on the left. Loaded after pfd.css. */
+body.gate { min-height: 100vh; overflow-x: hidden; background: var(--void); }
+#det { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; }
+
+.gate-frame { position: relative; z-index: 1; min-height: calc(100vh - 28px); margin: 14px;
+  border: 1px solid rgba(31, 85, 132, .55); display: grid; grid-template-rows: auto 1fr;
+  padding: 0 0 110px; }
+.gate-frame::before, .gate-frame::after { content: ""; position: absolute; width: 34px; height: 34px;
+  border: 2px solid var(--blue); pointer-events: none; z-index: 2; }
+.gate-frame::before { left: -2px; top: -2px; border-right: 0; border-bottom: 0; }
+.gate-frame::after { right: -2px; bottom: -2px; border-left: 0; border-top: 0; }
+
+/* title band across the whole top; the detector's outer chambers pass under it */
+.gate-head { padding: 22px 3vw 18px; text-align: center;
+  background: linear-gradient(180deg, rgba(1, 3, 6, .78) 0%, rgba(1, 3, 6, .45) 70%, rgba(1, 3, 6, 0) 100%);
+  border-bottom: 1px solid rgba(31, 85, 132, .35); }
+.gate-title { font-family: var(--display); font-weight: 900; margin: 0; color: #fff; white-space: nowrap;
+  font-size: clamp(28px, 3.3vw, 110px); line-height: 1.05; letter-spacing: .035em;
+  text-shadow: 0 0 2px #fff, 0 0 26px rgba(30, 136, 216, .6), 0 0 64px rgba(30, 136, 216, .25); }
+.gate-title span { display: inline-block; }
+.gate-title i { font-style: normal; color: var(--accent); text-shadow: 0 0 18px var(--accent-glow); }
+.gate-kicker { color: var(--ink-2); font-size: 13px; letter-spacing: .04em; margin: 10px 0 0; }
+
+.gate-main { display: flex; align-items: center; padding: 24px 7vw 0; }
+
+.gate-plate { width: min(560px, 34vw); background: rgba(6, 16, 27, .9); border: 1px solid var(--rule-hi);
+  border-left: 3px solid var(--blue); backdrop-filter: blur(2px);
+  box-shadow: 0 0 0 1px rgba(30, 136, 216, .15), 0 24px 60px -24px rgba(30, 136, 216, .55); }
+.gate-plate.denied { animation: reject .7s ease-out both; border-left-color: var(--drop); }
+@keyframes reject {
+  0% { box-shadow: 0 0 0 2px var(--drop), 0 0 48px -4px rgba(227, 38, 46, .75); transform: translateX(0); }
+  15% { transform: translateX(-6px); } 30% { transform: translateX(5px); } 45% { transform: translateX(-3px); }
+  60% { transform: translateX(0); }
+  100% { box-shadow: 0 0 0 1px rgba(227, 38, 46, .3), 0 24px 60px -24px rgba(227, 38, 46, .45); }
+}
+.plate-head { display: flex; align-items: center; gap: 12px; padding: 16px 22px; border-bottom: 1px solid var(--rule); }
+.lamp { width: 11px; height: 11px; border-radius: 50%; background: var(--accent);
+  box-shadow: 0 0 10px var(--accent-glow); animation: lamp 2.4s ease-in-out infinite; }
+.denied .lamp { background: var(--drop); box-shadow: 0 0 10px rgba(227, 38, 46, .7); }
+@keyframes lamp { 50% { opacity: .35; } }
+.plate-name { font-family: var(--display); font-weight: 700; font-size: 17px; letter-spacing: .18em; color: #fff; }
+.plate-state { margin-left: auto; font-size: 14px; color: var(--accent); }
+.denied .plate-state { color: #FF6B63; }
+.plate-body { padding: 24px 22px 26px; display: grid; gap: 16px; }
+.plate-body label { display: grid; gap: 8px; font-size: 14px; color: var(--ink-2); }
+.plate-body input { width: 100%; font-size: 20px; padding: 14px 14px; background: #000; letter-spacing: .08em; }
+.plate-body button { font-family: var(--display); font-weight: 800; letter-spacing: .18em; font-size: 18px; padding: 16px 14px; margin-top: 4px; }
+.plate-foot { border-top: 1px solid var(--rule); padding: 12px 22px; font-size: 12px; color: var(--ink-2); }
+.gate-msg { border: 1px solid var(--rule-hi); padding: 10px 12px; font-size: 15px; }
+.gate-msg.bad { border-color: var(--drop); background: rgba(227, 38, 46, .14); color: #FFD9D7; }
+.gate-msg.warn { border-color: var(--ember); background: rgba(242, 201, 30, .10); }
+
+/* the run/event block of an event display */
+.gate-meta { position: absolute; left: 7vw; bottom: 20px; z-index: 1; font-size: 12px; line-height: 1.55; color: #cfd9e3; }
+.gate-meta b { color: var(--accent); font-weight: normal; }
+.gate-meta .note { color: var(--ink-2); font-size: 11px; margin-top: 4px; }
+
+@media (max-width: 899px) {
+  .gate-title { white-space: normal; font-size: clamp(24px, 7vw, 40px); }
+  .gate-main { padding: 96vw 16px 0; justify-content: center; }   /* detector sits between title and plate */
+  .gate-plate { width: 100%; }
+  .gate-meta { position: static; padding: 18px 20px 0; }
+  .gate-frame { padding-bottom: 24px; }
+}
+@media (prefers-reduced-motion: reduce) { .gate-plate.denied, .lamp { animation: none; } }
+
+/* trigger outcome, placed under the detector by gate.js */
+.gate-alert { position: fixed; z-index: 2; transform: translate(-50%, 0) scale(.96); opacity: 0;
+  pointer-events: none; text-align: center; padding: 10px 22px; border: 1px solid transparent;
+  background: rgba(1, 3, 6, .82); transition: opacity .25s ease, transform .25s ease; }
+.gate-alert.show { opacity: 1; transform: translate(-50%, 0) scale(1); }
+.gate-alert b { display: block; font-family: var(--display); font-weight: 900; font-size: clamp(18px, 2.2vw, 30px);
+  letter-spacing: .16em; text-transform: uppercase; }
+.gate-alert span { display: block; font-size: 12px; color: var(--ink-2); margin-top: 4px; }
+.gate-alert.ok { border-color: var(--cyan); box-shadow: 0 0 34px -6px rgba(63, 195, 255, .6); }
+.gate-alert.ok b { color: var(--cyan); text-shadow: 0 0 18px rgba(63, 195, 255, .7); }
+.gate-alert.bad { border-color: var(--drop); box-shadow: 0 0 34px -6px rgba(227, 38, 46, .6); }
+.gate-alert.bad b { color: #FF5A55; text-shadow: 0 0 18px rgba(227, 38, 46, .7); }
+
+/* detector rumble on a rejected trigger */
+#det.rumble { animation: rumble .6s cubic-bezier(.36, .07, .19, .97) both; }
+@keyframes rumble {
+  10%, 90% { transform: translate(-2px, 1px); } 20%, 80% { transform: translate(4px, -2px); }
+  30%, 50%, 70% { transform: translate(-7px, 3px) rotate(-.3deg); } 40%, 60% { transform: translate(7px, -3px) rotate(.3deg); }
+}
+@media (prefers-reduced-motion: reduce) { .gate-alert { transition: none; } #det.rumble { animation: none; } }

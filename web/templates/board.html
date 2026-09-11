@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block main %}
+<p class="lede">One row per column. Only hygiene gates produce DROP; separation and structure scans are not built in mk1 and show as such.</p>
+<div class="tabs" role="group" aria-label="Region"><button type="button" data-region="barrel">Barrel</button><button type="button" data-region="endcap">Endcap</button></div>
+<div id="empty" class="banner hidden"></div>
+<div id="board" class="hidden">
+  <div id="status-banners"></div>
+  <div class="row">
+    <section class="panel">
+      <h2>Run</h2>
+      <table class="small"><tbody id="runmeta"></tbody></table>
+      <div class="chips" id="tally"></div>
+    </section>
+    <section class="panel">
+      <h2>Reference</h2>
+      <p id="refstate" class="small"></p>
+      <button id="signoff" type="button">Sign off this run as the reference</button>
+      <details class="small"><summary>Differences from the reference</summary><div id="refdiffs"></div></details>
+    </section>
+    <section class="panel">
+      <h2>Canaries</h2>
+      <table class="small"><thead><tr><th>Canary</th><th>Column</th><th>Expect</th><th>Status</th></tr></thead><tbody id="canaries"></tbody></table>
+    </section>
+  </div>
+  <section class="panel">
+    <h2>File schema</h2>
+    <div id="schema" class="small"></div>
+  </section>
+  <section class="panel">
+    <h2>S14.5 cross-block dCor (background)</h2>
+    <p class="small muted">Dependence between the active list's NN1 and NN2 feature blocks, before any training. Input-level dCor predicts how much work λ will have to do; it is not the same number as the network-output dCor on record.</p>
+    <div id="cb"></div>
+    <p><button type="button" id="cbrun">Run S14.5 on the active list</button></p>
+    <div id="cbprog"></div>
+  </section>
+  <section class="panel">
+    <h2>Columns</h2>
+    <div class="ctl">
+      <label>Find <input id="q" type="search" placeholder="column name"></label>
+      <label>Verdict <select id="fv"><option value="">all</option><option>PASS</option><option>FIX</option><option>DROP</option><option>META</option></select></label>
+      <label>List <select id="fl"><option value="">all columns</option><option value="in">in active list</option><option value="NN1">NN1</option><option value="NN2">NN2</option></select></label>
+      <span class="small muted" id="shown"></span>
+    </div>
+    <p class="small muted" id="listnote"></p>
+    <div class="tablewrap"><table id="cols"><thead><tr>
+      <th>Column</th><th>Net</th><th>Verdict</th><th>Type</th><th>S2 missing</th><th>S3 dead</th><th class="num">S4 values</th><th>S5</th><th class="num">S9 pinned</th><th class="num">S13 sep</th><th class="num">S13 invalid-sep</th><th class="num">S13.2 mass z</th><th>Reasons</th>
+    </tr></thead><tbody></tbody></table></div>
+    <p class="small muted" id="notbuilt"></p>
+  </section>
+</div>
+{% endblock %}
+{% block scripts %}<script src="/static/app/js/board.js"></script>{% endblock %}

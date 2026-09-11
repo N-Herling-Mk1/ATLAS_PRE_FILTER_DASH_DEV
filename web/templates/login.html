@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>ATLAS - Sig/Bg - DashBoard - mk1</title>
+<link rel="icon" href="/static/public/img/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/static/public/css/pfd.css">
+<link rel="stylesheet" href="/static/public/css/gate.css">
+</head>
+<body class="gate" data-denied="{{ '1' if msg == 'Wrong password.' else '0' }}">
+<canvas id="det" aria-hidden="true"></canvas>
+<div id="gate-alert" class="gate-alert" role="status" aria-live="assertive"><b></b><span></span></div>
+<div class="gate-frame">
+  <header class="gate-head">
+    <h1 class="gate-title" id="gate-title"><span>ATLAS&nbsp;<i>-</i> Sig/Bg&nbsp;<i>-</i> DashBoard&nbsp;<i>-</i> mk1</span></h1>
+    <p class="gate-kicker">UA ATLAS group, Run-3 long-lived particle search. Feature gate and EDA for the displaced-vertex network inputs. Real data only.</p>
+  </header>
+  <main class="gate-main">
+    <form class="gate-plate{% if msg == 'Wrong password.' %} denied{% endif %}" method="post" action="/login">
+      <div class="plate-head">
+        <span class="lamp" aria-hidden="true"></span>
+        <span class="plate-name">Gate</span>
+        <span class="plate-state" id="gate-state">{{ 'trigger rejected' if msg == 'Wrong password.' else 'locked' }}</span>
+      </div>
+      <div class="plate-body">
+        {% if msg %}<div class="gate-msg {% if msg == 'Wrong password.' %}bad{% else %}warn{% endif %}" role="alert">{{ msg }}</div>{% endif %}
+        <input type="hidden" name="next" value="{{ nxt }}">
+        <label for="pw">Password
+          <input id="pw" type="password" name="password" autocomplete="current-password" required>
+        </label>
+        <button class="primary" type="submit">Sign in</button>
+      </div>
+      <div class="plate-foot">Signed out after 8 hours without activity; unsaved work is discarded.</div>
+    </form>
+  </main>
+  <div class="gate-meta" aria-label="Display information">
+    <div>Gate: <b id="gate-meta-state">{{ 'rejected' if msg == 'Wrong password.' else 'locked' }}</b></div>
+    {% if mode != 'live' %}<div>Server: local, {{ mode }} mode</div>{% endif %}
+    <div id="gate-clock">&nbsp;</div>
+    <div class="note">Events are illustrative, generated in your browser. Not data.</div>
+  </div>
+</div>
+<script src="/static/public/js/gate.js"></script>
+</body>
+</html>

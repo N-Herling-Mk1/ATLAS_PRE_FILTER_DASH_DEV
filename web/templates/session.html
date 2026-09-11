@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block main %}
+<p class="lede">The server keeps nothing when you sign out or time out. Save a bundle to keep this session; load it later to pick up exactly where you left off.</p>
+<div class="row">
+  <section class="panel">
+    <h2>Save</h2>
+    <p class="small">The bundle holds results, rulings, settings and the active list version. It holds no event rows.</p>
+    <p id="savestate" class="small"></p>
+    <a class="btn primary" id="save" href="/api/session/save">Save session bundle</a>
+  </section>
+  <section class="panel">
+    <h2>Load</h2>
+    <p class="small">Loading replaces everything in this session. Results made from different data are marked stale.</p>
+    <input type="file" id="bundle" accept=".zip">
+    <button type="button" id="load">Load bundle</button>
+    <div id="loadmsg" class="small"></div>
+  </section>
+</div>
+<section class="panel">
+  <h2>Name on your work</h2>
+  <p class="small">Optional. Stamped on the gate runs, list versions and bundles you make from now on, so a shared password still leaves a record of who did what. Not a login.</p>
+  <div class="ctl small"><input type="text" id="who" maxlength="40" placeholder="unnamed"><button type="button" id="setwho">Save name</button><span id="whomsg" class="muted"></span></div>
+</section>
+<section class="panel">
+  <h2>This session</h2>
+  <table class="small"><tbody id="sess"></tbody></table>
+</section>
+{% endblock %}
+{% block scripts %}<script src="/static/app/js/session.js"></script>{% endblock %}

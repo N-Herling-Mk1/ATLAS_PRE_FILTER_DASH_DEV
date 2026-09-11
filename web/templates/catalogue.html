@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block main %}
+<p class="lede">NN1 and NN2 feature lists, per region. Every upload or edit creates a new version; nothing is overwritten. The analysis pipeline reads exports, not this page.</p>
+<section class="panel">
+  <h2>Lists</h2>
+  <table id="lists"><thead><tr><th>List</th><th>Head</th><th class="num">Barrel NN1/NN2</th><th class="num">Endcap NN1/NN2</th><th class="num">Versions</th><th>Updated</th><th></th></tr></thead><tbody></tbody></table>
+  <p class="small muted" id="nolists"></p>
+</section>
+<section class="panel">
+  <h2>Where the lists disagree</h2>
+  <p class="small muted">Every feature in every list head, per region. A row is a conflict when the lists place it differently (NN1, NN2, or absent).</p>
+  <div class="ctl small"><label><input type="checkbox" id="mx-only" checked> Conflicts only</label>
+    <label>Region <select id="mx-region"><option value="">both</option><option>barrel</option><option>endcap</option></select></label>
+    <span id="mx-count" class="muted"></span></div>
+  <div class="tablewrap"><table class="small" id="mx"><thead></thead><tbody></tbody></table></div>
+</section>
+<section class="panel">
+  <h2>Upload</h2>
+  <div class="tabs" role="group" aria-label="Upload format"><button type="button" data-fmt="csv" aria-pressed="true">CSV pair</button><button type="button" data-fmt="py">Python module</button></div>
+  <div id="up-csv">
+    <div class="ctl small">
+      <label>NN1 CSV <input type="file" id="f-nn1" accept=".csv"></label>
+      <label>NN2 CSV <input type="file" id="f-nn2" accept=".csv"></label>
+      <label>If no barrel/endcap header <select id="f-region"><option value="">(file has one)</option><option value="barrel">barrel</option><option value="endcap">endcap</option><option value="both">both</option></select></label>
+    </div>
+    <button type="button" id="parse-csv">Read files</button>
+  </div>
+  <div id="up-py" class="hidden">
+    <div class="ctl small"><label>.py file <input type="file" id="f-py" accept=".py"></label></div>
+    <button type="button" id="parse-py">Find lists in file</button>
+    <p class="small muted">The file is parsed, never run. Map each list it contains to a region and net.</p>
+    <table class="small" id="pymap"><tbody></tbody></table>
+    <button type="button" id="py-apply" class="hidden">Build preview from mapping</button>
+  </div>
+  <div id="preview" class="hidden">
+    <h2>Preview</h2>
+    <div class="nets" id="pv-nets"></div>
+    <div class="ctl small">
+      <label>Save as <select id="pv-mode"><option value="new">a new list</option><option value="version">a new version of</option></select></label>
+      <label id="pv-name-l">Name <input type="text" id="pv-name" placeholder="e.g. kj_Jul_26"></label>
+      <label id="pv-target-l" class="hidden">List <select id="pv-target"></select></label>
+      <label>Note <input type="text" id="pv-note" placeholder="what this is and where it came from"></label>
+    </div>
+    <button type="button" class="primary" id="pv-commit">Save list</button>
+  </div>
+</section>
+<section class="panel hidden" id="detail">
+  <h2 id="d-title"></h2>
+  <div class="ctl small">
+    <label>Version <select id="d-ver"></select></label>
+    <button type="button" id="d-use">Use on the verdict board</button>
+    <a class="btn" id="d-export" href="#">Export CSV pair</a>
+  </div>
+  <p class="small muted" id="d-meta"></p>
+  <div class="nets" id="d-nets"></div>
+  <div class="ctl small" id="d-editbar">
+    <label>Add <input type="text" id="d-add" placeholder="feature name"></label>
+    <label>to <select id="d-add-to"><option>barrel NN1</option><option>barrel NN2</option><option>endcap NN1</option><option>endcap NN2</option></select></label>
+    <button type="button" id="d-add-btn">Add</button>
+  </div>
+  <div class="ctl small">
+    <span id="d-pending" class="muted">No pending changes.</span>
+    <label>Note <input type="text" id="d-note" placeholder="why"></label>
+    <button type="button" class="primary" id="d-save" disabled>Save as new version</button>
+    <button type="button" id="d-discard" disabled>Discard changes</button>
+  </div>
+  <details class="small"><summary>History</summary><table id="d-hist"><thead><tr><th>Version</th><th>Parent</th><th>Created</th><th>By</th><th>Note</th></tr></thead><tbody></tbody></table></details>
+</section>
+<section class="panel">
+  <h2>Compare two versions</h2>
+  <div class="ctl small">
+    <label>A <select id="cmp-a"></select></label>
+    <label>B <select id="cmp-b"></select></label>
+    <button type="button" id="cmp-go">Compare</button>
+  </div>
+  <div id="cmp-out" class="small"></div>
+</section>
+{% endblock %}
+{% block scripts %}<script src="/static/app/js/catalogue.js"></script>{% endblock %}

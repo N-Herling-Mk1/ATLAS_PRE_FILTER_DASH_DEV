@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block main %}
+<p class="lede">Check the input files, then run the gate per region. Long runs go through the job queue; you can leave this page and come back.</p>
+<div id="loc-banner" class="banner bad hidden" role="alert"></div>
+<section class="panel">
+  <h2>Gate runs</h2>
+  <div class="row" id="regions"></div>
+  <p class="small muted">Smoke run: first 2,000 rows of each file, for a fast shake-down. Smoke results cannot be signed off as the reference.</p>
+</section>
+<section class="panel">
+  <h2>Input files</h2>
+  <p class="small muted" id="loc-path">Locations file: —</p>
+  <div class="tablewrap"><table id="inv"><thead><tr><th>Key</th><th>File</th><th>Status</th><th class="num">MB</th><th>Path</th></tr></thead><tbody></tbody></table></div>
+</section>
+<section class="panel">
+  <h2>Scaler source for S9</h2>
+  <p class="small" id="s9src">—</p>
+  <p class="small muted">S9 judges the transform the network receives. Set <code>PFD_LLP_SRC</code> in .env (or <code>-LlpSrc</code> on the launcher) to the folder that contains the <code>llp</code> package, and S9 uses <code>llp/data.py::apply_scale</code> itself. Otherwise it runs labelled reference transforms.</p>
+</section>
+<section class="panel">
+  <h2>Jobs this session</h2>
+  <table id="jobs"><thead><tr><th>Job</th><th>What</th><th>Status</th><th>Progress</th><th class="num">Elapsed</th></tr></thead><tbody></tbody></table>
+  <p class="small muted" id="workers"></p>
+</section>
+<section class="panel">
+  <h2>Alerts</h2>
+  <p class="small" id="alerts">—</p>
+  <p class="small muted">Failed sign-ins and failed jobs alert through every enabled transport, at most 6 per hour per kind. Configure email/SMS in .env (see .env.example).</p>
+  <button type="button" id="testalert">Send test alert</button> <span class="small" id="testmsg"></span>
+</section>
+{% endblock %}
+{% block scripts %}<script src="/static/app/js/run.js"></script>{% endblock %}

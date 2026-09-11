@@ -1,0 +1,2 @@
+{% for i in range(8) %}<span class="zone top z{{ i }}" aria-hidden="true">{{ i + 1 }}</span><span class="zone bot z{{ i }}" aria-hidden="true">{{ i + 1 }}</span>{% endfor %}
+{% for i in range(4) %}<span class="zone lft y{{ i }}" aria-hidden="true">{{ "ABCD"[i] }}</span><span class="zone rgt y{{ i }}" aria-hidden="true">{{ "ABCD"[i] }}</span>{% endfor %}
