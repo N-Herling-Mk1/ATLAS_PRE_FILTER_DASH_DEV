@@ -163,7 +163,7 @@ def create_app(**overrides):
 
     @app.route("/favicon.ico")
     def favicon():
-        return send_from_directory(os.path.join(ROOT, "web", "static", "public", "img"),
+        return send_from_directory(os.path.join(ROOT, "web", "static", "public", "assets", "images"),
                                    "favicon.svg", mimetype="image/svg+xml")
 
     # ------------------------------------------------------------- errors --

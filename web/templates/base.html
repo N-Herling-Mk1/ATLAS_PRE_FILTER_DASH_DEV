@@ -4,8 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
-<title>{{ title }}: ATLAS pre-filter</title>
-<link rel="icon" href="/static/public/img/favicon.svg" type="image/svg+xml">
+<title>{{ title }} - ATLAS-Dashboard-mk_1</title>
+<link rel="icon" href="/static/public/assets/images/favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="/static/public/css/pfd.css">
 </head>
 <body data-page="{{ page }}" data-mode="{{ mode }}">
@@ -17,7 +17,11 @@
 </div>
 <div class="frame">
   <nav class="plates" aria-label="Pages">
-    <div class="brand">ATLAS<br>PRE-FILTER<span>gate and EDA, mk4</span></div>
+    <div class="brand">
+      <img class="brand-mark" src="/static/public/assets/images/proton_2_256.png" alt="" aria-hidden="true">
+      <span class="brand-name">ATLAS<i>-</i>Dashboard<i>-</i>mk_1</span>
+      <span>gate and EDA</span>
+    </div>
     {% for key, href, label in pages %}
     <a href="{{ href }}"{% if key == page %} aria-current="page"{% endif %}>{{ label }}</a>
     {% endfor %}
@@ -29,7 +33,7 @@
   </main>
 </div>
 <aside class="titleblock" aria-label="Sheet provenance">
-  <div class="t"><b>ATLAS PRE-FILTER DASH</b><em id="tb-mode">{{ mode|upper }}</em></div>
+  <div class="t"><b>ATLAS-Dashboard-mk_1</b><em id="tb-mode">{{ mode|upper }}</em></div>
   <div class="c"><span>SHEET</span><strong>{{ title }}</strong></div>
   <div class="c"><span>RUNS SIGNED</span><strong id="tb-who">—</strong></div>
   <div class="c end"><span>STATE</span><strong id="tb-state">—</strong></div>
@@ -41,6 +45,7 @@
   <div class="c end last"><span>REV</span><strong id="tb-rev">mk4</strong></div>
 </aside>
 </div>
+<script src="/static/public/js/arrive.js"></script>
 <script src="/static/app/js/common.js"></script>
 {% block scripts %}{% endblock %}
 </body>

@@ -1,18 +1,26 @@
-/* gate.js -- sign-in page only.
+/* gate.js -- sign-in page only. mk10.
    A transverse (r-phi) view of a barrel detector drawn in the browser.
 
    Load:        the detector lights up in a spiral sweep, then idles "at rest":
-                faint calorimeter noise, stray chamber hits, the inner-tracker
-                readout circling, the toroid breathing, an occasional cosmic muon.
+                the structure sits LIGHT and readable, with sparse, bright,
+                edge-glowing activity over it -- occasional calorimeter cells,
+                stray chamber hits, a pixelated readout gradient circling the
+                inner detector layers, the toroid breathing, a rare cosmic muon.
+   Hover:       the pointer probes the detector. Whatever is under it -- an inner
+                detector layer, a calorimeter band, a muon station, a toroid coil --
+                lights in a quantised pixel gradient centred on the cursor, and is
+                named next to it.
    Sign in:     the password goes to the server by fetch; an event fires either way.
      correct -> an LLP event: the long-lived particle crosses the calorimeter unseen
-                and decays in the muon spectrometer (MS displaced vertex). Alert
-                "LLP detected", then the dashboard opens.
+                and decays in the muon spectrometer (MS displaced vertex). The lock
+                opens, the console reads STATUS: SIGNED IN, and a vertical line
+                wipes across the screen with a flare on its leading edge before the
+                dashboard loads.
      wrong   -> an ordinary event with no displaced vertex. The detector rumbles,
-                the muon system flashes red, alert "no LLP detected".
+                the muon system flashes red, the console reads STATUS: REJECTED.
    Every event is illustrative, generated in the browser, and labelled as not data.
-   Reduced motion: still frames only, same alerts. Without JavaScript the form
-   posts normally. */
+   Reduced motion: still frames only, same alerts, no wipe. Without JavaScript the
+   form posts normally. */
 "use strict";
 (() => {
   const cv = document.getElementById("det");
@@ -34,6 +42,14 @@
     idRings: [0.065, 0.105, 0.145, 0.19], idOuter: 0.21, solenoid: 0.235,
     em: [0.26, 0.34], tile: [0.36, 0.52], ncell: 64,
     coils: [0.56, 0.985], stations: [0.60, 0.76, 0.93], nch: 16, chT: 0.028,
+    // inner-detector layers as discrete modules: count, module thickness,
+    // number of bright lobes in the readout gradient, colour.
+    idMods: [
+      {n: 44, t: 0.017, lobes: 3, col: C.hit},     // pixel
+      {n: 64, t: 0.016, lobes: 4, col: C.hit},     // pixel
+      {n: 84, t: 0.015, lobes: 5, col: C.id},      // SCT
+      {n: 104, t: 0.014, lobes: 7, col: C.track},  // TRT
+    ],
   };
 
   function layout() {
@@ -41,11 +57,14 @@
     W = cv.clientWidth; H = cv.clientHeight;
     cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    if (W >= 900) { cx = W * 0.68; cy = H * 0.5; R = Math.min(H * 0.46, W * 0.32); faint = 1; }
+    // desktop: the wheel is deliberately oversized and bleeds off the top and
+    // bottom edges; it clears the sign-in plate at wide widths and passes behind
+    // it at narrow ones.
+    if (W >= 900) { cx = W * 0.72; cy = H * 0.52; R = Math.min(H * 0.54, W * 0.38); faint = 1; }
     else {                                               // phones: detector between the title and the plate
       const head = document.querySelector(".gate-head");
       const top = head ? head.getBoundingClientRect().bottom : 0;
-      R = Math.min(W * 0.44, H * 0.26); cx = W / 2; cy = top + R + 10; faint = 0.75;
+      R = Math.min(W * 0.46, H * 0.30); cx = W / 2; cy = top + R + 10; faint = 0.8;
     }
     cache = null; idleBase = null;
     placeAlert();
@@ -88,6 +107,73 @@
   const P = (r, phi) => [cx + r * R * Math.cos(phi), cy - r * R * Math.sin(phi)];
   const ramp = (t, a, b) => Math.max(0, Math.min(1, (t - a) / (b - a)));
   const ease = x => 1 - Math.pow(1 - x, 3);
+  const fract = x => x - Math.floor(x);
+  /* ---- pixel gradients -------------------------------------------------
+     Anything that lights up is filled with a grid of small blocks whose alpha
+     falls off from a source point and is QUANTISED into a few levels. The steps
+     are what make it read as pixels rather than a soft glow; a per-block jitter
+     keeps the bands from looking like contour lines. PXS is the block size in
+     CSS pixels, QSTEPS the number of brightness levels. */
+  const PXS = 7, QSTEPS = 5;
+  const qa = a => Math.round(a * QSTEPS) / QSTEPS;
+  const jitter = (i, k) => 0.70 + 0.45 * fract(Math.sin(i * 97.13 + k * 31.77) * 43758.5453);
+
+  // an annular sector (calorimeter cells, ring segments) as pixel blocks
+  function pixelSector(r0, r1, a0, a1, col, peak, gx, gy, rad) {
+    const rm = (r0 + r1) / 2;
+    const nr = Math.max(1, Math.round((r1 - r0) * R / PXS));
+    const na = Math.max(1, Math.round(Math.abs(a1 - a0) * rm * R / PXS));
+    const gr = ((r1 - r0) / nr) * 0.13, ga = ((a1 - a0) / na) * 0.13;
+    for (let i = 0; i < nr; i++) {
+      const ra = r0 + (r1 - r0) * i / nr + gr, rb = r0 + (r1 - r0) * (i + 1) / nr - gr;
+      for (let j = 0; j < na; j++) {
+        const aa = a0 + (a1 - a0) * j / na + ga, ab = a0 + (a1 - a0) * (j + 1) / na - ga;
+        const [sx, sy] = P((ra + rb) / 2, (aa + ab) / 2);
+        const d = Math.hypot(sx - gx, sy - gy) / rad;
+        const a = qa(peak * Math.exp(-1.7 * d * d) * jitter(i, j));
+        if (a < 0.04) continue;
+        ctx.beginPath();
+        ctx.arc(cx, cy, rb * R, -ab, -aa);
+        ctx.arc(cx, cy, ra * R, -aa, -ab, true);
+        ctx.closePath();
+        ctx.fillStyle = `rgba(${col},${Math.min(1, a)})`;
+        ctx.fill();
+      }
+    }
+  }
+
+  // a rectangular element (modules, chambers, coils) as pixel blocks
+  function pixelRect(px, py, rot, w, h, col, peak, gx, gy, rad) {
+    const nw = Math.max(1, Math.round(w / PXS)), nh = Math.max(1, Math.round(h / PXS));
+    const cw = w / nw, ch = h / nh, co = Math.cos(rot), si = Math.sin(rot);
+    ctx.save(); ctx.translate(px, py); ctx.rotate(rot);
+    for (let i = 0; i < nw; i++) for (let j = 0; j < nh; j++) {
+      const lx = -w / 2 + cw * (i + 0.5), ly = -h / 2 + ch * (j + 0.5);
+      const sx = px + lx * co - ly * si, sy = py + lx * si + ly * co;
+      const d = Math.hypot(sx - gx, sy - gy) / rad;
+      const a = qa(peak * Math.exp(-1.7 * d * d) * jitter(i, j));
+      if (a < 0.04) continue;
+      ctx.fillStyle = `rgba(${col},${Math.min(1, a)})`;
+      ctx.fillRect(-w / 2 + cw * i + cw * 0.12, -h / 2 + ch * j + ch * 0.12, cw * 0.76, ch * 0.76);
+    }
+    ctx.restore();
+  }
+
+  // a muon chamber, lit as pixels, with the outline kept hot
+  function pixelChamber(s, k, col, peak, gx, gy, rad) {
+    const big = k % 2 === 0, r = G.stations[s] + (big ? 0 : 0.026);
+    const phi = k / G.nch * TAU, w = r * (big ? 0.33 : 0.24) * R, h = G.chT * R;
+    const [x, y] = P(r, phi);
+    const g = gx === undefined ? [x, y] : [gx, gy];
+    pixelRect(x, y, -phi + Math.PI / 2, w, h, col, peak, g[0], g[1], rad || Math.max(w, h) * 0.62);
+    const d = Math.hypot(g[0] - x, g[1] - y) / (rad || Math.max(w, h) * 0.62);
+    const edge = peak * Math.exp(-1.7 * d * d);
+    if (edge < 0.05) return;
+    ctx.save(); ctx.shadowBlur = 26; ctx.shadowColor = `rgba(${col},${edge})`;
+    chamber(s, k, null, `rgba(255,255,255,${0.8 * edge})`);
+    ctx.restore();
+  }
+
   function ring(r, frac, style, width, dash) {
     ctx.beginPath(); ctx.strokeStyle = style; ctx.lineWidth = width; ctx.setLineDash(dash || []);
     ctx.arc(cx, cy, r * R, -Math.PI / 2, -Math.PI / 2 + TAU * frac); ctx.stroke(); ctx.setLineDash([]);
@@ -108,6 +194,43 @@
     ctx.strokeStyle = stroke; ctx.lineWidth = 1; ctx.stroke(); ctx.restore();
   }
   const nearestChamber = phi => ((Math.round(phi / TAU * G.nch) % G.nch) + G.nch) % G.nch;
+
+  // one inner-detector module: a short tangential block on layer radius r
+  function idModule(r, phi, arc, th, fill, stroke) {
+    const [x, y] = P(r, phi);
+    const w = arc * r * R, h = th * R;
+    ctx.save(); ctx.translate(x, y); ctx.rotate(-phi + Math.PI / 2);
+    ctx.beginPath(); ctx.rect(-w / 2, -h / 2, w, h);
+    if (fill) { ctx.fillStyle = fill; ctx.fill(); }
+    if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = 1; ctx.stroke(); }
+    ctx.restore();
+  }
+
+  /* The inner detector is drawn as discrete modules, not smooth rings, and their
+     brightness follows a gradient around each layer -- a few bright lobes, a
+     deterministic per-module jitter, and a slow phase that alternates direction
+     layer to layer. amp scales the whole thing: the base pass draws the modules
+     dim (unlit pixels), the at-rest pass redraws the same modules lit. */
+  function idPixels(sweep, phaseT, amp, glow) {
+    G.idRings.forEach((r, i) => {
+      const m = G.idMods[i], arc = TAU / m.n * 0.74;
+      const dir = i % 2 ? -1 : 1;
+      const phase = phaseT / (11000 + 2600 * i) * TAU * dir;
+      ring(r, sweep, `rgba(${m.col},${0.13 * amp})`, 1);
+      const on = Math.floor(sweep * m.n);
+      if (glow) { ctx.save(); ctx.shadowBlur = 12; }
+      for (let k = 0; k < on; k++) {
+        const phi = (k + 0.5) / m.n * TAU;
+        const g = 0.5 + 0.5 * Math.sin(phi * m.lobes - phase);
+        const j = 0.72 + 0.28 * fract(Math.sin(i * 97.13 + k * 31.77) * 43758.5453);
+        const a = amp * j * (0.16 + 0.84 * Math.pow(g, 1.7));
+        if (a < 0.02) continue;
+        if (glow) ctx.shadowColor = `rgba(${m.col},${Math.min(1, a)})`;
+        idModule(r, phi, arc, m.t, `rgba(${m.col},${0.78 * a})`, `rgba(${m.col},${Math.min(1, 1.0 * a)})`);
+      }
+      if (glow) ctx.restore();
+    });
+  }
 
   function hitSets(e) {
     const muHit = new Set(), vHit = new Set();
@@ -130,34 +253,36 @@
 
   // ---------------------------------------------------------------- scene ---
   // sweep: 0..1 detector build-in. e: event or null. t: event clock (ms). rej: muon system red.
+  // Structure alphas are the "at rest" weights: the detector reads as a lit
+  // drawing, with the activity layer supplying contrast rather than visibility.
   function draw(sweep, e, t, rej) {
     ctx.clearRect(0, 0, W, H);
     ctx.globalAlpha = faint;
-    ring(0.012, 1, C.beam, 1.2);
-    G.idRings.forEach((r, i) => ring(r, sweep, `rgba(${C.id},.55)`, 1, [3, 3 + i]));
-    ring(G.solenoid, sweep, `rgba(${C.tile},.35)`, 1);
+    ring(0.012, 1, C.beam, 1.4);
+    idPixels(sweep, 0, 0.42, false);                     // unlit module bed
+    ring(G.solenoid, sweep, `rgba(${C.tile},.55)`, 1.2);
     const nOn = Math.floor(sweep * G.ncell);
     for (let k = 0; k < nOn; k++) {
-      cell(G.em[0], G.em[1], k, G.ncell, null, `rgba(${C.em},.10)`);
+      cell(G.em[0], G.em[1], k, G.ncell, `rgba(${C.em},.028)`, `rgba(${C.em},.22)`);
       for (let l = 0; l < 3; l++) {
         const a = G.tile[0] + (G.tile[1] - G.tile[0]) * l / 3, b = G.tile[0] + (G.tile[1] - G.tile[0]) * (l + 1) / 3;
-        cell(a, b, k, G.ncell, `rgba(${C.tile},.05)`, `rgba(${C.tile},.16)`);
+        cell(a, b, k, G.ncell, `rgba(${C.tile},.10)`, `rgba(${C.tile},.30)`);
       }
     }
     for (let k = 0; k < 8; k++) {
       if (k / 8 >= sweep) break;
       const phi = (k + 0.5) / 8 * TAU, [x0, y0] = P(G.coils[0], phi), [x1, y1] = P(G.coils[1], phi);
-      ctx.beginPath(); ctx.strokeStyle = `rgba(${C.coil},.22)`; ctx.lineWidth = 5; ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
+      ctx.beginPath(); ctx.strokeStyle = `rgba(${C.coil},.34)`; ctx.lineWidth = 6; ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
     }
     const chOn = Math.floor(sweep * G.nch);
     const {muHit, vHit} = hitSets(e);
     for (let s = 0; s < 3; s++) for (let k = 0; k < chOn; k++) {
       const key = `${s}:${k}`;
-      let fill = `rgba(${C.chamber},.06)`;
+      let fill = `rgba(${C.chamber},.15)`;
       if (e && muHit.has(key) && t > 1350) fill = `rgba(${C.hit},${.75 * ramp(t, 1350, 1600)})`;
       if (e && vHit.has(key) && t > 1550) fill = `rgba(${C.hit},${.85 * ramp(t, 1550, 1850)})`;
       if (rej) fill = `rgba(${C.muon},.28)`;
-      chamber(s, k, fill, rej ? `rgba(${C.muon},.95)` : `rgba(${C.chamber},.5)`);
+      chamber(s, k, fill, rej ? `rgba(${C.muon},.95)` : `rgba(${C.chamber},.78)`);
     }
     if (!e) { ctx.globalAlpha = 1; return; }
     // calorimeter deposits
@@ -260,9 +385,10 @@
   }
 
   // ------------------------------------------------------------- at rest ----
-  // A live detector is never quite still: noise hits in the calorimeter, stray
-  // chamber hits, the inner-tracker readout cycling, the toroid breathing, and now
-  // and then a cosmic muon straight through. Sparse but bright; drawn at ~30 fps.
+  // A live detector is never quite still, but at rest it should read as a lit
+  // drawing with rare, bright events on it -- not a light show. Activity is
+  // sparse; what fires is drawn hot, with a heavy edge glow against the lighter
+  // structure underneath. Drawn at ~30 fps.
   const FX_FRAME_MS = 33;
   const fx = {cells: [], blips: [], cosmic: null, nextCell: 0, nextBlip: 0, nextCosmic: 0};
   let lastFx = 0;
@@ -280,79 +406,162 @@
   const flash = x => x < 0.1 ? x / 0.1 : Math.pow((1 - x) / 0.9, 1.4);
   function drawFx(now, quiet) {
     ctx.globalAlpha = faint;
-    // inner tracker: a readout sweep circling each layer, alternate directions
-    G.idRings.forEach((r, i) => {
-      const a0 = (i % 2 ? -1 : 1) * now / (6500 + 1900 * i) * TAU;
-      for (let j = 0; j < 4; j++) {
-        ctx.beginPath(); ctx.strokeStyle = `rgba(${C.id},${0.8 - 0.18 * j})`; ctx.lineWidth = 2;
-        const b0 = a0 - j * 0.18 * (i % 2 ? -1 : 1);
-        ctx.arc(cx, cy, r * R, -b0 - 0.18, -b0); ctx.stroke();
-      }
-    });
+    // inner detector: the module bed lit by a slow gradient, layer by layer
+    idPixels(1, now, 1, true);
     // toroid coils breathing
     const br = 0.5 + 0.5 * Math.sin(now / 6000 * TAU);
     for (let k = 0; k < 8; k++) {
       const phi = (k + 0.5) / 8 * TAU, [x0, y0] = P(G.coils[0], phi), [x1, y1] = P(G.coils[1], phi);
-      ctx.beginPath(); ctx.strokeStyle = `rgba(${C.coil},${0.03 + 0.09 * br})`; ctx.lineWidth = 9;
+      ctx.beginPath(); ctx.strokeStyle = `rgba(${C.coil},${0.05 + 0.10 * br})`; ctx.lineWidth = 10;
       ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
     }
-    // calorimeter noise cells
+    // calorimeter noise cells -- rare
     if (now > fx.nextCell) {
       // a small deposit: 1-3 neighbouring cells, the centre one brightest
       const em = Math.random() < 0.55, k0 = Math.floor(Math.random() * G.ncell), l = Math.floor(Math.random() * 3);
-      const n = 1 + Math.floor(Math.random() * 3), life = rnd(1600, 2600), peak = rnd(0.75, 1);
+      const n = 1 + Math.floor(Math.random() * 3), life = rnd(2200, 3400), peak = rnd(0.8, 1);
       for (let d = 0; d < n; d++)
         fx.cells.push({em, k: (k0 + d) % G.ncell, l, t0: now, life, peak: peak * (d === 1 || n === 1 ? 1 : 0.55)});
-      fx.nextCell = now + rnd(quiet ? 2600 : 1100, quiet ? 4800 : 2400);
+      fx.nextCell = now + rnd(quiet ? 5000 : 2800, quiet ? 9000 : 5600);
     }
     fx.cells = fx.cells.filter(c => now - c.t0 < c.life);
-    ctx.save(); ctx.shadowBlur = 14;
     fx.cells.forEach(c => {
       const a = flash((now - c.t0) / c.life) * c.peak;
-      if (c.em) {
-        ctx.shadowColor = `rgba(${C.em},${a})`;
-        cell(G.em[0], G.em[1], c.k, G.ncell, `rgba(${C.em},${0.85 * a})`, `rgba(${C.em},${a})`);
-      } else {
-        const lo = G.tile[0] + (G.tile[1] - G.tile[0]) * c.l / 3, hi = G.tile[0] + (G.tile[1] - G.tile[0]) * (c.l + 1) / 3;
-        ctx.shadowColor = `rgba(${C.hit},${a})`;
-        cell(lo, hi, c.k, G.ncell, `rgba(${C.hit},${0.75 * a})`, `rgba(${C.hit},${a})`);
-      }
+      const col = c.em ? C.em : C.hit;
+      const lo = c.em ? G.em[0] : G.tile[0] + (G.tile[1] - G.tile[0]) * c.l / 3;
+      const hi = c.em ? G.em[1] : G.tile[0] + (G.tile[1] - G.tile[0]) * (c.l + 1) / 3;
+      const a0 = c.k / G.ncell * TAU, a1 = (c.k + 1) / G.ncell * TAU;
+      const [gx, gy] = P((lo + hi) / 2, (a0 + a1) / 2);
+      // the deposit blooms outward from the middle of the cell, in pixel steps
+      pixelSector(lo, hi, a0, a1, col, 1.05 * a, gx, gy, (hi - lo) * R * 1.15);
+      ctx.save(); ctx.shadowBlur = 26; ctx.shadowColor = `rgba(${col},${a})`;
+      cell(lo, hi, c.k, G.ncell, null, `rgba(255,255,255,${0.5 * a})`);   // hot edge
+      ctx.restore();
     });
-    ctx.restore();
-    // stray muon-chamber hits
+    // stray muon-chamber hits -- rare
     if (now > fx.nextBlip) {
-      fx.blips.push({s: Math.floor(Math.random() * 3), k: Math.floor(Math.random() * G.nch), t0: now, life: 1400});
-      fx.nextBlip = now + rnd(quiet ? 4500 : 2600, quiet ? 8000 : 5200);
+      fx.blips.push({s: Math.floor(Math.random() * 3), k: Math.floor(Math.random() * G.nch), t0: now, life: 1700});
+      fx.nextBlip = now + rnd(quiet ? 9000 : 6000, quiet ? 15000 : 11000);
     }
     fx.blips = fx.blips.filter(b => now - b.t0 < b.life);
-    ctx.save(); ctx.shadowBlur = 18;
-    fx.blips.forEach(b => {
-      const a = flash((now - b.t0) / b.life);
-      ctx.shadowColor = `rgba(${C.hit},${a})`;
-      chamber(b.s, b.k, `rgba(${C.hit},${0.95 * a})`, `rgba(${C.hit},${a})`);
-    });
-    ctx.restore();
-    // a cosmic muon, straight through, every 11-19 s
+    fx.blips.forEach(b => pixelChamber(b.s, b.k, C.hit, flash((now - b.t0) / b.life)));
+    // a cosmic muon, straight through, every 26-42 s
     if (!quiet && now > fx.nextCosmic && !fx.cosmic) {
       fx.cosmic = {phi: rnd(Math.PI * 0.3, Math.PI * 0.7), off: rnd(-0.32, 0.32), t0: now};
-      fx.nextCosmic = now + rnd(14000, 24000);
+      fx.nextCosmic = now + rnd(26000, 42000);
     }
     if (fx.cosmic) {
-      const age = now - fx.cosmic.t0, grow = ease(Math.min(1, age / 450)), fade = 1 - ramp(age, 1200, 2800);
+      const age = now - fx.cosmic.t0, grow = ease(Math.min(1, age / 450)), fade = 1 - ramp(age, 1400, 3200);
       if (fade <= 0) fx.cosmic = null;
       else {
         const {phi, off} = fx.cosmic, d = [Math.cos(phi), Math.sin(phi)], n = [-d[1], d[0]], L = 1.05;
         const a = [off * n[0] + L * d[0], off * n[1] + L * d[1]];
         const b = [off * n[0] - L * d[0] * (2 * grow - 1), off * n[1] - L * d[1] * (2 * grow - 1)];
-        ctx.save(); ctx.shadowBlur = 16; ctx.shadowColor = `rgba(${C.muon},${fade})`;
+        ctx.save(); ctx.shadowBlur = 24; ctx.shadowColor = `rgba(${C.muon},${fade})`;
         ctx.beginPath(); ctx.strokeStyle = `rgba(${C.muon},${0.95 * fade})`; ctx.lineWidth = 2.2;
         ctx.moveTo(cx + a[0] * R, cy - a[1] * R); ctx.lineTo(cx + b[0] * R, cy - b[1] * R); ctx.stroke();
-        ctx.shadowColor = `rgba(${C.hit},${fade})`; ctx.shadowBlur = 18;
-        if (grow >= 1) crossings(off, phi).forEach(([s, k]) =>
-          chamber(s, k, `rgba(${C.hit},${0.95 * fade})`, `rgba(${C.hit},${fade})`));
+        ctx.shadowColor = `rgba(${C.hit},${fade})`; ctx.shadowBlur = 30;
         ctx.restore();
+        if (grow >= 1) crossings(off, phi).forEach(([s, k]) => pixelChamber(s, k, C.hit, fade));
       }
     }
+    drawHover(now);
+    ctx.globalAlpha = 1;
+  }
+
+  // -------------------------------------------------------------- hover ----
+  /* The pointer probes the detector. Whatever sits under it is identified by
+     radius, then that component and its neighbours are lit with the same pixel
+     gradient the at-rest hits use, centred on the cursor: bright under the
+     pointer, stepping down and out. The canvas stays pointer-events:none, so
+     the form above it is unaffected; positions come from the window. */
+  const ID_NAME = ["pixel layer 1", "pixel layer 2", "SCT", "TRT"];
+  let hover = null;
+
+  function componentAt(x, y) {
+    if (!R) return null;
+    const dx = x - cx, dy = cy - y;
+    const rr = Math.hypot(dx, dy) / R, phi = Math.atan2(dy, dx);
+    if (rr > 1.02) return null;
+    if (rr < 0.035) return {kind: "beam", phi, label: "beam pipe", col: "94,114,136"};
+    for (let i = 0; i < G.idRings.length; i++)
+      if (Math.abs(rr - G.idRings[i]) < 0.024)
+        return {kind: "id", i, phi, label: ID_NAME[i], col: G.idMods[i].col};
+    if (Math.abs(rr - G.solenoid) < 0.022) return {kind: "sol", phi, label: "solenoid", col: C.tile};
+    if (rr >= G.em[0] - 0.012 && rr <= G.em[1] + 0.012)
+      return {kind: "em", phi, label: "EM calorimeter", col: C.em};
+    if (rr >= G.tile[0] - 0.012 && rr <= G.tile[1] + 0.012)
+      return {kind: "tile", phi, label: "tile calorimeter", col: C.tile};
+    for (let s = 0; s < G.stations.length; s++)
+      if (Math.abs(rr - G.stations[s]) < 0.05)
+        return {kind: "ms", s, phi, label: `muon station ${s + 1}`, col: C.chamber};
+    if (rr >= G.coils[0] && rr <= G.coils[1])
+      return {kind: "coil", phi, label: "toroid coil", col: C.coil};
+    return null;
+  }
+
+  function drawHover(now) {
+    if (!hover || reduce) return;
+    const c = componentAt(hover.x, hover.y);
+    document.body.classList.toggle("probing", !!c);
+    if (!c) return;
+    const gx = hover.x, gy = hover.y, rad = 0.20 * R;
+    const peak = Math.min(1, 0.95 + 0.12 * Math.sin(now / 420));
+    ctx.save();
+    ctx.globalAlpha = faint;
+    if (c.kind === "id") {
+      const m = G.idMods[c.i], r = G.idRings[c.i], arc = TAU / m.n * 0.74;
+      const k0 = Math.round(c.phi / TAU * m.n), span = Math.ceil(m.n * 0.22);
+      for (let d = -span; d <= span; d++) {
+        const k = ((k0 + d) % m.n + m.n) % m.n, ph = (k + 0.5) / m.n * TAU;
+        const [x, y] = P(r, ph);
+        pixelRect(x, y, -ph + Math.PI / 2, arc * r * R, m.t * R, m.col, peak, gx, gy, rad);
+      }
+    } else if (c.kind === "em" || c.kind === "tile") {
+      const band = c.kind === "em" ? G.em : G.tile;
+      const k0 = Math.round(c.phi / TAU * G.ncell);
+      for (let d = -5; d <= 5; d++) {
+        const k = ((k0 + d) % G.ncell + G.ncell) % G.ncell;
+        const a0 = k / G.ncell * TAU, a1 = (k + 1) / G.ncell * TAU;
+        if (c.kind === "em") pixelSector(band[0], band[1], a0, a1, c.col, peak, gx, gy, rad);
+        else for (let l = 0; l < 3; l++)
+          pixelSector(band[0] + (band[1] - band[0]) * l / 3,
+                      band[0] + (band[1] - band[0]) * (l + 1) / 3, a0, a1, c.col, peak, gx, gy, rad);
+      }
+    } else if (c.kind === "ms") {
+      const k0 = Math.round(c.phi / TAU * G.nch);
+      for (let s = 0; s < G.stations.length; s++)
+        for (let d = -3; d <= 3; d++) {
+          const k = ((k0 + d) % G.nch + G.nch) % G.nch;
+          pixelChamber(s, k, c.col, peak, gx, gy, rad);
+        }
+    } else if (c.kind === "coil") {
+      const k0 = Math.round(c.phi / TAU * 8 - 0.5);
+      for (let d = -1; d <= 1; d++) {
+        const k = ((k0 + d) % 8 + 8) % 8, ph = (k + 0.5) / 8 * TAU;
+        const rm = (G.coils[0] + G.coils[1]) / 2;
+        const [x, y] = P(rm, ph);
+        pixelRect(x, y, -ph, (G.coils[1] - G.coils[0]) * R, 0.026 * R, c.col, peak, gx, gy, rad);
+      }
+    } else if (c.kind === "sol") {
+      const a0 = c.phi - 0.5, a1 = c.phi + 0.5;
+      pixelSector(G.solenoid - 0.012, G.solenoid + 0.012, a0, a1, c.col, peak, gx, gy, rad);
+    } else if (c.kind === "beam") {
+      pixelSector(0, 0.03, 0, TAU, c.col, peak, cx, cy, 0.05 * R);
+    }
+    // name it, the way an event display labels what you point at
+    const right = hover.x <= cx;
+    ctx.font = '11px "Share Tech Mono", monospace';
+    ctx.textAlign = right ? "left" : "right";
+    ctx.fillStyle = "rgba(255,255,255,.92)";
+    ctx.fillText(c.label, hover.x + (right ? 18 : -18), hover.y - 12);
+    ctx.beginPath();
+    ctx.strokeStyle = `rgba(${c.col},.5)`;
+    ctx.lineWidth = 1;
+    ctx.moveTo(hover.x + (right ? 6 : -6), hover.y - 6);
+    ctx.lineTo(hover.x + (right ? 15 : -15), hover.y - 10);
+    ctx.stroke();
+    ctx.restore();
     ctx.globalAlpha = 1;
   }
 
@@ -364,7 +573,7 @@
       if (k < 1) { raf = requestAnimationFrame(loop); return; }
       mode = "idle";
       idleBase = null;
-      fx.nextCosmic = now + 3500;                       // first cosmic early, then sparse
+      fx.nextCosmic = now + 6000;                       // first cosmic early, then sparse
     }
     if (mode === "idle") {
       if (now - lastFx >= FX_FRAME_MS) {
@@ -419,6 +628,10 @@
   if (reduce) { mode = "idle"; draw(1, null, 0, false); }
   else { t0 = performance.now(); raf = requestAnimationFrame(loop); }
   window.addEventListener("resize", () => { layout(); redrawStill(); kick(); });
+  window.addEventListener("mousemove", e => { hover = {x: e.clientX, y: e.clientY}; kick(); },
+                          {passive: true});
+  window.addEventListener("mouseleave", () => { hover = null; document.body.classList.remove("probing"); });
+  window.addEventListener("blur", () => { hover = null; document.body.classList.remove("probing"); });
   document.addEventListener("visibilitychange", () => {
     if (document.hidden && raf) { cancelAnimationFrame(raf); raf = null; } else kick();
   });
@@ -427,7 +640,7 @@
   function placeAlert() {
     if (!alertEl) return;
     alertEl.style.left = `${cx}px`;
-    alertEl.style.top = `${W >= 900 ? cy + R * 0.62 : cy - 24}px`;   // below the calorimeter; centred on phones
+    alertEl.style.top = `${W >= 900 ? Math.min(cy + R * 0.62, H - 96) : cy - 24}px`;
   }
   function showAlert(ok) {
     alertEl.className = `gate-alert show ${ok ? "ok" : "bad"}`;
@@ -441,39 +654,152 @@
     rejectUntil = performance.now() + 700; kick();
   }
 
-  // ------------------------------------------------------------- sign in ----
+  // ------------------------------------------------- vertical line wipe -----
+  // Leaves the gate on a vertical line sweeping left to right: a hot core, a
+  // flare ahead of it, sparks shed off the edge, and the page dark behind.
+  // The dashboard is loaded when the line clears the right edge.
+  const wipeCv = document.getElementById("wipe");
+  function wipeOut(done) {
+    if (!wipeCv || reduce) { done(); return; }
+    wipeCv.classList.add("run");
+    const w = wipeCv.getContext("2d");
+    const d2 = window.devicePixelRatio || 1;
+    const WW = wipeCv.clientWidth, HH = wipeCv.clientHeight;
+    wipeCv.width = Math.round(WW * d2); wipeCv.height = Math.round(HH * d2);
+    w.setTransform(d2, 0, 0, d2, 0, 0);
+    const DUR = 1000, LEAD = 190, start = performance.now();
+    const sparks = [];
+    let prev = start, fired = false;
+    function frame(now) {
+      const dt = Math.min(48, now - prev); prev = now;
+      const k = Math.min(1, (now - start) / DUR);
+      const x = -LEAD + (WW + 2 * LEAD) * (k < .5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2);
+      w.clearRect(0, 0, WW, HH);
+      // everything behind the line goes dark
+      const veil = w.createLinearGradient(x - 220, 0, x, 0);
+      veil.addColorStop(0, "rgba(1,3,6,1)");
+      veil.addColorStop(1, "rgba(1,3,6,.35)");
+      w.fillStyle = "rgba(1,3,6,1)"; w.fillRect(0, 0, Math.max(0, x - 220), HH);
+      w.fillStyle = veil; w.fillRect(Math.max(0, x - 220), 0, Math.min(220, x + 220), HH);
+      // flare ahead of the line
+      const fl = w.createLinearGradient(x, 0, x + LEAD, 0);
+      fl.addColorStop(0, "rgba(63,195,255,.55)");
+      fl.addColorStop(0.35, "rgba(63,195,255,.14)");
+      fl.addColorStop(1, "rgba(63,195,255,0)");
+      w.fillStyle = fl; w.fillRect(x, 0, LEAD, HH);
+      // sparks shed off the edge
+      for (let i = 0; i < 5; i++)
+        sparks.push({x, y: Math.random() * HH, vx: -rnd(140, 900), vy: rnd(-140, 140),
+                     life: rnd(260, 720), t0: now, hot: Math.random() < 0.35});
+      for (let i = sparks.length - 1; i >= 0; i--) {
+        const s = sparks[i], age = now - s.t0;
+        if (age > s.life) { sparks.splice(i, 1); continue; }
+        s.x += s.vx * dt / 1000; s.y += s.vy * dt / 1000;
+        const a = 1 - age / s.life, len = Math.max(3, Math.abs(s.vx) * 0.012);
+        w.beginPath();
+        w.strokeStyle = s.hot ? `rgba(255,154,31,${a})` : `rgba(63,195,255,${a})`;
+        w.lineWidth = s.hot ? 1.6 : 1;
+        w.moveTo(s.x, s.y); w.lineTo(s.x + len, s.y); w.stroke();
+      }
+      // the core
+      w.save(); w.shadowBlur = 30; w.shadowColor = "rgba(63,195,255,.95)";
+      w.fillStyle = "rgba(63,195,255,.9)"; w.fillRect(x - 2.5, 0, 5, HH);
+      w.fillStyle = "#EAF8FF"; w.fillRect(x - 1, 0, 2, HH);
+      w.restore();
+      if (!fired && k > 0.82) { fired = true; done(); }   // navigate under the cover
+      if (k < 1) requestAnimationFrame(frame);
+      else { w.fillStyle = "rgba(1,3,6,1)"; w.fillRect(0, 0, WW, HH); }
+    }
+    requestAnimationFrame(frame);
+  }
+
+  // -------------------------------------------------------------- status ----
+  // One call drives the console, the lock, the plate word and the run-block
+  // line, so the four cannot disagree.
   const form = document.querySelector("form.gate-plate");
   const btn = form && form.querySelector("button[type=submit]");
   const pw = document.getElementById("pw");
+  const crtEl = document.getElementById("crt");
+  const crtLines = document.getElementById("crt-lines");
+  const rdNote = document.getElementById("rd-note");
   const stateEl = document.getElementById("gate-state");
   const metaEl = document.getElementById("gate-meta-state");
-  const setState = (plate, meta) => { if (stateEl) stateEl.textContent = plate; if (metaEl) metaEl.textContent = meta; };
+  const say = (t, cls) => { if (window.CRT) window.CRT.line(t, cls); };
+
+  const STATES = {
+    busy: {
+      tone: "busy", plate: "trigger fired", meta: "checking", note: "checking password", cls: "",
+      lines: [["> auth: sending", "dim"], ["trigger ..... fired", "dim"]],
+    },
+    in: {
+      tone: "ok", plate: "gate open", meta: "open", note: "LLP detected", cls: "open",
+      lines: [["trigger ..... LLP", "ok"], ["vertex ...... MS displaced", "ok"],
+              ["STATUS: SIGNED IN", "hot"], ["opening dashboard ...", "dim"]],
+    },
+    bad: {
+      tone: "bad", plate: "no LLP detected", meta: "rejected", note: "password rejected", cls: "denied",
+      lines: [["trigger ..... no LLP", "bad"], ["vertex ...... none", "dim"],
+              ["STATUS: REJECTED", "bad"]],
+    },
+    offline: {
+      tone: "bad", plate: "server unreachable", meta: "offline", note: "no answer from the server", cls: "denied",
+      lines: [["server ...... no answer", "bad"], ["STATUS: OFFLINE", "bad"]],
+    },
+  };
+
+  function setState(key) {
+    const st = STATES[key];
+    if (!st) return;
+    if (window.CRT) window.CRT.tone(st.tone);
+    st.lines.forEach(([t, c]) => say(t, c));
+    if (rdNote) rdNote.textContent = st.note;
+    if (stateEl) stateEl.textContent = st.plate;
+    if (metaEl) metaEl.textContent = st.meta;
+    if (form) {
+      form.classList.remove("open", "denied");
+      void form.offsetWidth;                            // restart the reject animation
+      if (st.cls) form.classList.add(st.cls);
+    }
+  }
+
+  // boot the console from the state the server rendered
+  if (window.CRT && crtLines) {
+    window.CRT.mount(crtLines);
+    const st0 = crtEl ? crtEl.dataset.state : "out";
+    const why = crtEl ? crtEl.dataset.reason : "none";
+    say("pfd gate // ATLAS-Dashboard-mk_1", "dim");
+    say("link ........ up", "dim");
+    say("detector .... r-phi view ready", "dim");
+    if (why && why !== "none") say(`last ........ ${why}`, "dim");
+    if (st0 === "rejected") say("STATUS: REJECTED", "bad");
+    else say("STATUS: SIGNED OUT", "hot");
+  }
+
+  // ------------------------------------------------------------- sign in ----
   let busy = false;
   if (form) form.addEventListener("submit", async e => {
     e.preventDefault();
     if (busy) return;
     busy = true; btn.disabled = true;
     alertEl.className = "gate-alert";
-    form.classList.remove("denied");
-    setState("trigger fired", "checking");
+    setState("busy");
     let res;
     try {
       const r = await fetch("/login", {method: "POST", body: new FormData(form),
                                        headers: {"X-PFD-Login": "1"}, credentials: "same-origin"});
       res = await r.json();
     } catch (err) {
-      setState("server unreachable", "offline");
+      setState("offline");
       busy = false; btn.disabled = false;
       return;
     }
     fireEvent(!!res.ok, () => {
       showAlert(!!res.ok);
       if (res.ok) {
-        setState("LLP detected", "open");
-        setTimeout(() => { location.href = res.next || "/"; }, reduce ? 600 : 1300);
+        setState("in");
+        setTimeout(() => wipeOut(() => { location.href = res.next || "/"; }), reduce ? 400 : 1500);
       } else {
-        setState("no LLP detected", "rejected");
-        form.classList.add("denied");
+        setState("bad");
         rumble();
         pw.value = "";
         setTimeout(() => { busy = false; btn.disabled = false; pw.focus(); }, 900);
