@@ -1,4 +1,4 @@
-/* gate.js -- sign-in page only. mk10.
+/* gate.js -- sign-in page only. mk12.
    A transverse (r-phi) view of a barrel detector drawn in the browser.
 
    Load:        the detector lights up in a spiral sweep, then idles "at rest":
@@ -13,9 +13,9 @@
    Sign in:     the password goes to the server by fetch; an event fires either way.
      correct -> an LLP event: the long-lived particle crosses the calorimeter unseen
                 and decays in the muon spectrometer (MS displaced vertex). The lock
-                opens, the console reads STATUS: SIGNED IN, and a vertical line
-                wipes across the screen with a flare on its leading edge before the
-                dashboard loads.
+                opens, the console reads STATUS: SIGNED IN, the gate fades to
+                black and the dashboard opens with a single line wipe that reveals
+                it (arrive.js).
      wrong   -> an ordinary event with no displaced vertex. The detector rumbles,
                 the muon system flashes red, the console reads STATUS: REJECTED.
    Every event is illustrative, generated in the browser, and labelled as not data.
@@ -654,12 +654,15 @@
     rejectUntil = performance.now() + 700; kick();
   }
 
-  // ------------------------------------------------- vertical line wipe -----
-  // Leaves the gate on a vertical line sweeping left to right: a hot core, a
-  // flare ahead of it, sparks shed off the edge, and the page dark behind.
-  // The dashboard is loaded when the line clears the right edge.
+  // ---------------------------------------------------- hand off to home ----
+  /* There is ONE wipe, and it happens on the dashboard: the new page opens
+     under black and a single vertical line sweeps across, revealing it. The
+     gate's only job is to get out of the way without a flash, so it fades to
+     black over a fifth of a second and then navigates -- the dashboard is
+     already loading behind that black. Doing the wipe here as well would mean
+     the line crossed the screen twice, once to cover and once to reveal. */
   const wipeCv = document.getElementById("wipe");
-  function wipeOut(done) {
+  function blackout(done) {
     if (!wipeCv || reduce) { done(); return; }
     wipeCv.classList.add("run");
     const w = wipeCv.getContext("2d");
@@ -667,48 +670,15 @@
     const WW = wipeCv.clientWidth, HH = wipeCv.clientHeight;
     wipeCv.width = Math.round(WW * d2); wipeCv.height = Math.round(HH * d2);
     w.setTransform(d2, 0, 0, d2, 0, 0);
-    const DUR = 1000, LEAD = 190, start = performance.now();
-    const sparks = [];
-    let prev = start, fired = false;
+    const DUR = 220, start = performance.now();
+    let fired = false;
     function frame(now) {
-      const dt = Math.min(48, now - prev); prev = now;
       const k = Math.min(1, (now - start) / DUR);
-      const x = -LEAD + (WW + 2 * LEAD) * (k < .5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2);
       w.clearRect(0, 0, WW, HH);
-      // everything behind the line goes dark
-      const veil = w.createLinearGradient(x - 220, 0, x, 0);
-      veil.addColorStop(0, "rgba(1,3,6,1)");
-      veil.addColorStop(1, "rgba(1,3,6,.35)");
-      w.fillStyle = "rgba(1,3,6,1)"; w.fillRect(0, 0, Math.max(0, x - 220), HH);
-      w.fillStyle = veil; w.fillRect(Math.max(0, x - 220), 0, Math.min(220, x + 220), HH);
-      // flare ahead of the line
-      const fl = w.createLinearGradient(x, 0, x + LEAD, 0);
-      fl.addColorStop(0, "rgba(63,195,255,.55)");
-      fl.addColorStop(0.35, "rgba(63,195,255,.14)");
-      fl.addColorStop(1, "rgba(63,195,255,0)");
-      w.fillStyle = fl; w.fillRect(x, 0, LEAD, HH);
-      // sparks shed off the edge
-      for (let i = 0; i < 5; i++)
-        sparks.push({x, y: Math.random() * HH, vx: -rnd(140, 900), vy: rnd(-140, 140),
-                     life: rnd(260, 720), t0: now, hot: Math.random() < 0.35});
-      for (let i = sparks.length - 1; i >= 0; i--) {
-        const s = sparks[i], age = now - s.t0;
-        if (age > s.life) { sparks.splice(i, 1); continue; }
-        s.x += s.vx * dt / 1000; s.y += s.vy * dt / 1000;
-        const a = 1 - age / s.life, len = Math.max(3, Math.abs(s.vx) * 0.012);
-        w.beginPath();
-        w.strokeStyle = s.hot ? `rgba(255,154,31,${a})` : `rgba(63,195,255,${a})`;
-        w.lineWidth = s.hot ? 1.6 : 1;
-        w.moveTo(s.x, s.y); w.lineTo(s.x + len, s.y); w.stroke();
-      }
-      // the core
-      w.save(); w.shadowBlur = 30; w.shadowColor = "rgba(63,195,255,.95)";
-      w.fillStyle = "rgba(63,195,255,.9)"; w.fillRect(x - 2.5, 0, 5, HH);
-      w.fillStyle = "#EAF8FF"; w.fillRect(x - 1, 0, 2, HH);
-      w.restore();
-      if (!fired && k > 0.82) { fired = true; done(); }   // navigate under the cover
-      if (k < 1) requestAnimationFrame(frame);
-      else { w.fillStyle = "rgba(1,3,6,1)"; w.fillRect(0, 0, WW, HH); }
+      w.fillStyle = `rgba(1,3,6,${k})`;
+      w.fillRect(0, 0, WW, HH);
+      if (!fired && k >= 1) { fired = true; done(); return; }
+      requestAnimationFrame(frame);
     }
     requestAnimationFrame(frame);
   }
@@ -797,7 +767,7 @@
       showAlert(!!res.ok);
       if (res.ok) {
         setState("in");
-        setTimeout(() => wipeOut(() => { location.href = res.next || "/"; }), reduce ? 400 : 1500);
+        setTimeout(() => blackout(() => { location.href = res.next || "/"; }), reduce ? 400 : 1500);
       } else {
         setState("bad");
         rumble();

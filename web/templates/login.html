@@ -16,13 +16,15 @@
 <canvas id="wipe" aria-hidden="true"></canvas>
 <div id="gate-alert" class="gate-alert" role="status" aria-live="assertive"><b></b><span></span></div>
 <div class="gate-frame">
-  <div class="mark" aria-hidden="true">
-    <img src="/static/public/assets/images/proton_2_256.png" alt="">
-    <span class="mark-tag">UA ATLAS<b>13.6 TeV</b>Run-3</span>
-  </div>
   <header class="gate-head">
-    <h1 class="gate-title" id="gate-title"><span>ATLAS<i>-</i>Dashboard<i>-</i>mk_1</span></h1>
-    <p class="gate-kicker">UA ATLAS group, Run-3 long-lived particle search. Feature gate and EDA for the displaced-vertex network inputs. Real data only.</p>
+    <div class="mark" aria-hidden="true">
+      <img src="/static/public/assets/images/proton_2_256.png" alt="">
+      <span class="mark-tag">UA ATLAS<b>13.6 TeV</b>Run-3</span>
+    </div>
+    <div class="head-text">
+      <h1 class="gate-title" id="gate-title"><span>ATLAS<i>-</i>Dashboard<i>-</i>mk_1</span></h1>
+      <p class="gate-kicker">UA ATLAS group, Run-3 long-lived particle search. Feature gate and EDA for the displaced-vertex network inputs. Real data only.</p>
+    </div>
   </header>
   <main class="gate-main">
     <form class="gate-plate{% if wrong %} denied{% endif %}" method="post" action="/login">
@@ -42,6 +44,8 @@
              data-reason="{% if wrong %}password rejected{% elif msg == 'Signed out after inactivity.' %}8 h inactivity{% elif msg == 'Signed out.' %}signed out{% else %}none{% endif %}">
           <div class="crt-screen">
             <div class="crt-lines" id="crt-lines" role="status" aria-live="polite"></div>
+            <canvas class="crt-mark" id="crt-mark" aria-hidden="true"
+                    data-src="/static/public/assets/images/proton_crt_64.png"></canvas>
             <div class="crt-glass" aria-hidden="true"></div>
           </div>
           <div class="crt-foot"><span>gate console</span><span id="rd-note">{% if wrong %}password rejected{% elif msg == 'Signed out after inactivity.' %}signed out after inactivity{% elif msg == 'Signed out.' %}signed out{% else %}gate locked{% endif %}</span></div>
@@ -65,6 +69,7 @@
   </div>
 </div>
 <script src="/static/public/js/crt.js"></script>
+<script src="/static/public/js/crt_mark.js"></script>
 <script src="/static/public/js/gate.js"></script>
 </body>
 </html>

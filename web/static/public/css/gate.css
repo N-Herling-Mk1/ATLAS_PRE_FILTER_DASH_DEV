@@ -17,23 +17,29 @@ body.gate.probing { cursor: crosshair; }
 .gate-frame::after { right: -2px; bottom: -2px; border-left: 0; border-top: 0; }
 
 /* ------------------------------------------------------------ proton mark -- */
-/* assets/images/proton_2_256.png. The plate is black, so screen blending drops
-   the background and leaves the glow; the mask feathers the square edge. */
-.mark { position: absolute; left: 18px; top: 14px; z-index: 3; display: flex; align-items: center;
-  gap: 14px; pointer-events: none; }
-.mark img { width: clamp(84px, 8.4vw, 132px); height: auto; display: block;
-  mix-blend-mode: screen;
-  -webkit-mask-image: radial-gradient(circle at 50% 50%, #000 58%, transparent 78%);
-          mask-image: radial-gradient(circle at 50% 50%, #000 58%, transparent 78%);
-  filter: drop-shadow(0 0 18px rgba(30, 136, 216, .35)); }
-.mark .mark-tag { font-size: 11px; letter-spacing: .22em; color: var(--ink-2); text-transform: uppercase;
-  border-left: 1px solid var(--rule-hi); padding-left: 12px; line-height: 1.7; }
-.mark .mark-tag b { display: block; color: var(--accent); font-weight: normal; letter-spacing: .18em; }
-
-/* title band across the whole top; the detector's outer chambers pass under it */
-.gate-head { padding: 22px clamp(150px, 13vw, 230px) 18px; text-align: center;
+/* assets/images/proton_2_256.png, trimmed to its content. The mark is IN the
+   header's flow, not floated over it: the band grows to whatever the mark needs,
+   so it can never reach down into the sign-in plate no matter how the title
+   wraps or how short the window is. The image is black-backed, so screen
+   blending drops the field and the radial mask feathers the square's corners. */
+.gate-head { display: flex; align-items: center; gap: clamp(16px, 2vw, 34px);
+  padding: 34px clamp(20px, 3vw, 54px) 16px;
   background: linear-gradient(180deg, rgba(1, 3, 6, .78) 0%, rgba(1, 3, 6, .45) 70%, rgba(1, 3, 6, 0) 100%);
   border-bottom: 1px solid rgba(31, 85, 132, .35); }
+.head-text { flex: 1 1 auto; min-width: 0; text-align: center; }
+
+.mark { flex: 0 0 auto; display: flex; align-items: center; gap: 14px; }
+/* No mask. A radial mask on a circle with no size keyword measures to the
+   farthest CORNER, so 62%/82% fell at 0.44w/0.58w -- inside the image's own
+   half-width -- and ate the outer ring and the quarks. Screen blending already
+   drops the black field completely, which is all the mask was there to do. */
+.mark img { width: clamp(120px, 11.5vw, 185px); height: auto; display: block;
+  mix-blend-mode: screen;
+  filter: drop-shadow(0 0 18px rgba(30, 136, 216, .35)); }
+.mark .mark-tag { font-size: 12px; letter-spacing: .22em; color: var(--ink-2); text-transform: uppercase;
+  border-left: 1px solid var(--rule-hi); padding-left: 12px; line-height: 1.7; white-space: nowrap; }
+.mark .mark-tag b { display: block; color: var(--accent); font-weight: normal; letter-spacing: .18em; }
+
 .gate-title { font-family: var(--display); font-weight: 900; margin: 0; color: #fff; white-space: nowrap;
   font-size: clamp(28px, 3.3vw, 110px); line-height: 1.05; letter-spacing: .035em;
   text-shadow: 0 0 2px #fff, 0 0 26px rgba(30, 136, 216, .6), 0 0 64px rgba(30, 136, 216, .25); }
@@ -43,7 +49,7 @@ body.gate.probing { cursor: crosshair; }
 
 .gate-main { display: flex; align-items: flex-start; padding: 10px 7vw 0 2.4vw; }
 
-.gate-plate { width: min(560px, 34vw); background: rgba(6, 16, 27, .9); border: 1px solid var(--rule-hi);
+.gate-plate { width: min(700px, 38vw); background: rgba(6, 16, 27, .9); border: 1px solid var(--rule-hi);
   border-left: 3px solid var(--blue); backdrop-filter: blur(2px);
   box-shadow: 0 0 0 1px rgba(30, 136, 216, .15), 0 24px 60px -24px rgba(30, 136, 216, .55); }
 .gate-plate.denied { animation: reject .7s ease-out both; border-left-color: var(--drop); }
@@ -55,16 +61,16 @@ body.gate.probing { cursor: crosshair; }
   60% { transform: translateX(0); }
   100% { box-shadow: 0 0 0 1px rgba(227, 38, 46, .3), 0 24px 60px -24px rgba(227, 38, 46, .45); }
 }
-.plate-head { display: flex; align-items: center; gap: 12px; padding: 14px 22px; border-bottom: 1px solid var(--rule); }
-.plate-name { font-family: var(--display); font-weight: 700; font-size: clamp(12px, 1.05vw, 16px);
+.plate-head { display: flex; align-items: center; gap: 14px; padding: 18px 26px; border-bottom: 1px solid var(--rule); }
+.plate-name { font-family: var(--display); font-weight: 700; font-size: clamp(13px, 1.3vw, 20px);
   letter-spacing: .16em; color: #fff; text-transform: uppercase; }
-.plate-state { margin-left: auto; font-size: 13px; color: var(--accent); white-space: nowrap; }
+.plate-state { margin-left: auto; font-size: 15px; color: var(--accent); white-space: nowrap; }
 .denied .plate-state { color: #FF6B63; }
 .open .plate-state { color: var(--cyan); }
 
 /* ------------------------------------------------------------------ lock -- */
 /* Shackle lifts and swings when the gate opens; the body flashes on a reject. */
-.lock { width: 30px; height: 34px; flex: 0 0 auto; display: block; overflow: visible; }
+.lock { width: 36px; height: 41px; flex: 0 0 auto; display: block; overflow: visible; }
 .lock .body { fill: rgba(255, 154, 31, .14); stroke: var(--accent); stroke-width: 1.6; }
 .lock .shackle { fill: none; stroke: var(--accent); stroke-width: 2.2; stroke-linecap: round;
   transform-box: fill-box; transform-origin: 82% 100%;
@@ -81,51 +87,83 @@ body.gate.probing { cursor: crosshair; }
 @keyframes shackle-rattle { 25% { transform: rotate(-5deg); } 60% { transform: rotate(4deg); } }
 
 /* ------------------------------------------------------------ cathode -- */
-/* A small scrolling terminal: phosphor text on a curved dark screen, scanlines
-   and a vignette over the top, block cursor at the end of the last line. Tone
-   follows the gate state. Fixed height, so new lines scroll the old ones off. */
-.crt { border: 1px solid var(--rule-hi); background: #01070A;
-  box-shadow: inset 0 0 30px -8px rgba(63, 195, 255, .35), 0 0 0 1px rgba(0, 0, 0, .6); }
-.crt-screen { position: relative; overflow: hidden; padding: 10px 12px 8px;
-  background: radial-gradient(120% 140% at 50% 45%, #061318 0%, #010609 72%, #000 100%); }
-.crt-lines { position: relative; z-index: 1; height: 7.6em; overflow: hidden;
-  font-family: var(--mono); font-size: clamp(11px, .95vw, 13.5px); line-height: 1.52;
-  color: var(--crt-ink); text-shadow: 0 0 6px var(--crt-glow), 0 0 14px var(--crt-glow);
+/* A green-phosphor terminal. Bright ink over curved glass, with the things a
+   real tube does: scanlines, a shadow mask, a bright band rolling down the
+   screen, a slow brightness flicker and an occasional vertical hold slip. All
+   of it is decoration over the text, none of it moves the text itself. */
+.crt { border: 1px solid var(--rule-hi); background: #01090B;
+  box-shadow: inset 0 0 34px -6px rgba(77, 255, 122, .30), 0 0 0 1px rgba(0, 0, 0, .6),
+              0 0 26px -12px rgba(77, 255, 122, .45); }
+.crt-screen { position: relative; overflow: hidden; padding: 12px 14px 10px;
+  background: radial-gradient(120% 140% at 50% 45%, #04180F 0%, #01090B 70%, #000 100%); }
+
+.crt-lines { position: relative; z-index: 1; height: 9.2em; overflow: hidden;
+  font-family: var(--mono); font-size: clamp(12px, 1.05vw, 16px); line-height: 1.55;
+  color: var(--crt-ink);
+  text-shadow: 0 0 3px var(--crt-ink), 0 0 10px var(--crt-glow), 0 0 22px var(--crt-glow);
+  animation: crt-flicker 3.7s steps(1, end) infinite;
   scrollbar-width: none; }
 .crt-lines::-webkit-scrollbar { display: none; }
 .crt-line { white-space: pre-wrap; word-break: break-word; }
-.crt-line.dim { opacity: .55; }
-.crt-line.ok { color: var(--cyan); text-shadow: 0 0 6px rgba(63, 195, 255, .7); }
-.crt-line.bad { color: #FF6B63; text-shadow: 0 0 6px rgba(227, 38, 46, .7); }
-.crt-line.hot { color: #fff; text-shadow: 0 0 8px var(--crt-glow), 0 0 18px var(--crt-glow);
-  letter-spacing: .06em; }
-.crt-cursor { display: inline-block; margin-left: 1px; animation: crt-blink 1.05s steps(2, end) infinite; }
+.crt-line.dim { opacity: .62; }
+.crt-line.ok { color: #7CFFA8; text-shadow: 0 0 4px #7CFFA8, 0 0 14px rgba(77, 255, 122, .8); }
+.crt-line.bad { color: #FF7A72; text-shadow: 0 0 4px #FF7A72, 0 0 14px rgba(227, 38, 46, .8); }
+.crt-line.hot { color: #EAFFF0; letter-spacing: .06em;
+  text-shadow: 0 0 5px #fff, 0 0 14px var(--crt-ink), 0 0 30px var(--crt-glow); }
+.crt-cursor { display: inline-block; margin-left: 1px;
+  animation: crt-blink 1.05s steps(2, end) infinite; }
 @keyframes crt-blink { 50% { opacity: 0; } }
 
-/* the glass: scanlines, a faint shadow mask and a vignette */
+/* the glass: scanlines + shadow mask, drifting slowly, under a vignette */
 .crt-glass { position: absolute; inset: 0; z-index: 2; pointer-events: none;
   background:
-    repeating-linear-gradient(0deg, rgba(0, 0, 0, .34) 0 1px, transparent 1px 3px),
-    repeating-linear-gradient(90deg, rgba(255, 255, 255, .022) 0 1px, transparent 1px 3px),
-    radial-gradient(130% 130% at 50% 50%, transparent 52%, rgba(0, 0, 0, .55) 100%);
-  animation: crt-roll 7.5s linear infinite; }
-@keyframes crt-roll { to { background-position: 0 0, 0 0, 0 0, 0 -220px; } }
+    repeating-linear-gradient(0deg, rgba(0, 0, 0, .40) 0 1px, transparent 1px 3px),
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, .030) 0 1px, transparent 1px 3px),
+    radial-gradient(130% 130% at 50% 50%, transparent 50%, rgba(0, 0, 0, .58) 100%);
+  background-size: 100% 3px, 3px 100%, 100% 100%;
+  animation: crt-drift 9s linear infinite; }
+@keyframes crt-drift { to { background-position: 0 3px, 0 0, 0 0; } }
 
-.crt { --crt-ink: #FFB347; --crt-glow: rgba(255, 154, 31, .45); }
-.crt.tone-busy { --crt-ink: #9FE8FF; --crt-glow: rgba(63, 195, 255, .5); }
-.crt.tone-ok { --crt-ink: #6FE3FF; --crt-glow: rgba(63, 195, 255, .55); }
-.crt.tone-bad { --crt-ink: #FF8A84; --crt-glow: rgba(227, 38, 46, .5); }
+/* the band that rolls down a tube that is not quite in sync */
+.crt-screen::after { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 26%;
+  z-index: 3; pointer-events: none;
+  background: linear-gradient(180deg, transparent 0%, rgba(77, 255, 122, .07) 38%,
+              rgba(255, 255, 255, .055) 52%, rgba(77, 255, 122, .05) 64%, transparent 100%);
+  animation: crt-band 6.5s linear infinite; }
+@keyframes crt-band { 0% { transform: translateY(-130%); } 100% { transform: translateY(520%); } }
+
+@keyframes crt-flicker {
+  0%, 93% { opacity: 1; } 94% { opacity: .84; } 95% { opacity: 1; }
+  97% { opacity: .91; } 98%, 100% { opacity: 1; }
+}
+
+/* tone follows the gate state; green is the resting phosphor */
+.crt { --crt-ink: #4DFF7A; --crt-glow: rgba(77, 255, 122, .55); }
+.crt.tone-busy { --crt-ink: #9FFFC4; --crt-glow: rgba(120, 255, 180, .6); }
+.crt.tone-ok { --crt-ink: #6BFF9B; --crt-glow: rgba(77, 255, 122, .7); }
+.crt.tone-bad { --crt-ink: #FF8A84; --crt-glow: rgba(227, 38, 46, .55); }
+
+/* the mark again, in cathode format: a 64x64 grid of one phosphor green that
+   scrambles between the proton mark and "13.6 TeV" (crt_mark.js). The canvas is
+   64 actual pixels scaled up nearest-neighbour, so the blocks stay square. Sits
+   under the glass and beside the text, washed back so it reads as burn-in. */
+.crt-mark { position: absolute; right: clamp(40px, 5vw, 96px); top: 50%;
+  transform: translateY(-50%); z-index: 1;
+  width: clamp(96px, 9.6vw, 160px); height: auto; aspect-ratio: 1 / 1; opacity: .5;
+  image-rendering: pixelated; image-rendering: -moz-crisp-edges;
+  filter: drop-shadow(0 0 8px var(--crt-glow)); pointer-events: none; }
+.crt-lines { padding-right: clamp(150px, 15vw, 270px); }
 
 .crt-foot { display: flex; justify-content: space-between; gap: 10px;
-  border-top: 1px solid var(--rule); padding: 6px 12px; font-size: 10px;
+  border-top: 1px solid var(--rule); padding: 7px 14px; font-size: 11px;
   letter-spacing: .18em; color: var(--meta); text-transform: uppercase; }
 .rd-fallback { color: var(--accent); font-family: var(--display); letter-spacing: .12em; }
 
-.plate-body { padding: 20px 22px 24px; display: grid; gap: 16px; }
-.plate-body label { display: grid; gap: 8px; font-size: 14px; color: var(--ink-2); }
-.plate-body input { width: 100%; font-size: 20px; padding: 14px 14px; background: #000; letter-spacing: .08em; }
-.plate-body button { font-family: var(--display); font-weight: 800; letter-spacing: .18em; font-size: 18px; padding: 16px 14px; margin-top: 4px; }
-.plate-foot { border-top: 1px solid var(--rule); padding: 12px 22px; font-size: 12px; color: var(--ink-2); }
+.plate-body { padding: 24px 26px 28px; display: grid; gap: 20px; }
+.plate-body label { display: grid; gap: 10px; font-size: 15px; color: var(--ink-2); }
+.plate-body input { width: 100%; font-size: 24px; padding: 17px 16px; background: #000; letter-spacing: .08em; }
+.plate-body button { font-family: var(--display); font-weight: 800; letter-spacing: .20em; font-size: 22px; padding: 20px 16px; margin-top: 4px; }
+.plate-foot { border-top: 1px solid var(--rule); padding: 14px 26px; font-size: 13px; color: var(--ink-2); }
 .gate-msg { border: 1px solid var(--rule-hi); padding: 10px 12px; font-size: 15px; }
 .gate-msg.bad { border-color: var(--drop); background: rgba(227, 38, 46, .14); color: #FFD9D7; }
 .gate-msg.warn { border-color: var(--ember); background: rgba(242, 201, 30, .10); }
@@ -135,18 +173,20 @@ body.gate.probing { cursor: crosshair; }
 .gate-meta b { color: var(--accent); font-weight: normal; }
 .gate-meta .note { color: var(--ink-2); font-size: 11px; margin-top: 4px; }
 
+@media (max-width: 1279px) and (min-width: 900px) { .mark .mark-tag { display: none; } }
 @media (max-width: 899px) {
   .gate-title { white-space: normal; font-size: clamp(24px, 7vw, 40px); }
-  .gate-head { padding: 96px 16px 16px; }
-  .mark { left: 12px; top: 10px; }
+  .gate-head { flex-direction: column; gap: 12px; padding: 16px 16px 14px; }
+  .mark img { width: clamp(96px, 30vw, 150px); }
   .mark .mark-tag { display: none; }
-  .gate-main { padding: 96vw 16px 0; justify-content: center; }   /* detector sits between title and plate */
+  .gate-main { padding: 88vw 16px 0; justify-content: center; }   /* detector sits between title and plate */
   .gate-plate { width: 100%; }
   .gate-meta { position: static; padding: 18px 20px 0; }
   .gate-frame { padding-bottom: 24px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .gate-plate.denied, .lock .glow, .lock .shackle, .crt-cursor, .crt-glass { animation: none; }
+  .gate-plate.denied, .lock .glow, .lock .shackle, .crt-cursor, .crt-glass,
+  .crt-lines, .crt-screen::after { animation: none; }
   .lock .shackle { transition: none; }
 }
 
