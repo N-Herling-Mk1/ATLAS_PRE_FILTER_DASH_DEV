@@ -1,7 +1,10 @@
 /* The gate: sign-in page. An event display: black space, the detector drawn on
    #det, the sign-in plate on the left, the proton mark top left. Loaded after
    pfd.css. mk9. */
-body.gate { min-height: 100vh; overflow-x: hidden; background: var(--void); }
+body.gate { min-height: 100vh; overflow-x: hidden; background: var(--void);
+  /* success colour for the gate's own UI. The detector keeps cyan for LLP hits:
+     that is the event display's physics palette, not a status colour. */
+  --win: #43E08C; --win-glow: rgba(67, 224, 140, .65); }
 #det { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; }
 body.gate.probing { cursor: crosshair; }
 #wipe { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 40;
@@ -33,7 +36,7 @@ body.gate.probing { cursor: crosshair; }
    farthest CORNER, so 62%/82% fell at 0.44w/0.58w -- inside the image's own
    half-width -- and ate the outer ring and the quarks. Screen blending already
    drops the black field completely, which is all the mask was there to do. */
-.mark img { width: clamp(120px, 11.5vw, 185px); height: auto; display: block;
+.mark img { width: clamp(130px, 12.6vw, 208px); height: auto; display: block;
   mix-blend-mode: screen;
   filter: drop-shadow(0 0 18px rgba(30, 136, 216, .35)); }
 .mark .mark-tag { font-size: 12px; letter-spacing: .22em; color: var(--ink-2); text-transform: uppercase;
@@ -53,8 +56,8 @@ body.gate.probing { cursor: crosshair; }
   border-left: 3px solid var(--blue); backdrop-filter: blur(2px);
   box-shadow: 0 0 0 1px rgba(30, 136, 216, .15), 0 24px 60px -24px rgba(30, 136, 216, .55); }
 .gate-plate.denied { animation: reject .7s ease-out both; border-left-color: var(--drop); }
-.gate-plate.open { border-left-color: var(--cyan);
-  box-shadow: 0 0 0 1px rgba(63, 195, 255, .3), 0 24px 70px -20px rgba(63, 195, 255, .6); }
+.gate-plate.open { border-left-color: var(--win);
+  box-shadow: 0 0 0 1px rgba(67, 224, 140, .34), 0 24px 70px -20px rgba(67, 224, 140, .62); }
 @keyframes reject {
   0% { box-shadow: 0 0 0 2px var(--drop), 0 0 48px -4px rgba(227, 38, 46, .75); transform: translateX(0); }
   15% { transform: translateX(-6px); } 30% { transform: translateX(5px); } 45% { transform: translateX(-3px); }
@@ -66,7 +69,7 @@ body.gate.probing { cursor: crosshair; }
   letter-spacing: .16em; color: #fff; text-transform: uppercase; }
 .plate-state { margin-left: auto; font-size: 15px; color: var(--accent); white-space: nowrap; }
 .denied .plate-state { color: #FF6B63; }
-.open .plate-state { color: var(--cyan); }
+.open .plate-state { color: var(--win); }
 
 /* ------------------------------------------------------------------ lock -- */
 /* Shackle lifts and swings when the gate opens; the body flashes on a reject. */
@@ -78,9 +81,9 @@ body.gate.probing { cursor: crosshair; }
 .lock .key { fill: var(--accent); }
 .lock .glow { animation: lock-lamp 2.6s ease-in-out infinite; }
 @keyframes lock-lamp { 50% { opacity: .35; } }
-.gate-plate.open .lock .body { fill: rgba(63, 195, 255, .16); stroke: var(--cyan); }
-.gate-plate.open .lock .shackle { stroke: var(--cyan); transform: translateY(-5px) rotate(24deg); }
-.gate-plate.open .lock .key { fill: var(--cyan); }
+.gate-plate.open .lock .body { fill: rgba(67, 224, 140, .18); stroke: var(--win); }
+.gate-plate.open .lock .shackle { stroke: var(--win); transform: translateY(-5px) rotate(24deg); }
+.gate-plate.open .lock .key { fill: var(--win); }
 .gate-plate.denied .lock .body { fill: rgba(227, 38, 46, .18); stroke: var(--drop); }
 .gate-plate.denied .lock .shackle { stroke: var(--drop); animation: shackle-rattle .5s ease-out 2; }
 .gate-plate.denied .lock .key { fill: var(--drop); }
@@ -163,6 +166,19 @@ body.gate.probing { cursor: crosshair; }
 .plate-body label { display: grid; gap: 10px; font-size: 15px; color: var(--ink-2); }
 .plate-body input { width: 100%; font-size: 24px; padding: 17px 16px; background: #000; letter-spacing: .08em; }
 .plate-body button { font-family: var(--display); font-weight: 800; letter-spacing: .20em; font-size: 22px; padding: 20px 16px; margin-top: 4px; }
+/* University of Arizona: cardinal #AB0520 on navy #0C234B. Scoped to the gate's
+   own button, so the orange .primary used across the dashboard is unchanged. */
+.plate-body button.primary { background: linear-gradient(180deg, #C4102C 0%, #AB0520 52%, #8B0419 100%);
+  color: #fff; border: 1px solid #0C234B; text-shadow: 0 1px 0 rgba(0, 0, 0, .40);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .22), inset 0 0 0 1px rgba(12, 35, 75, .55),
+              0 12px 30px -14px rgba(171, 5, 32, .95); }
+.plate-body button.primary:hover { background: linear-gradient(180deg, #D51733 0%, #BC0A26 52%, #9C071E 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .28), inset 0 0 0 1px rgba(12, 35, 75, .55),
+              0 16px 38px -14px rgba(171, 5, 32, 1); }
+.plate-body button.primary:active { background: #8B0419; box-shadow: inset 0 2px 6px rgba(0, 0, 0, .5); }
+.plate-body button.primary:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+.gate-plate { border-left-color: #AB0520; }
+.gate-plate.open { border-left-color: var(--win); }
 .plate-foot { border-top: 1px solid var(--rule); padding: 14px 26px; font-size: 13px; color: var(--ink-2); }
 .gate-msg { border: 1px solid var(--rule-hi); padding: 10px 12px; font-size: 15px; }
 .gate-msg.bad { border-color: var(--drop); background: rgba(227, 38, 46, .14); color: #FFD9D7; }
@@ -190,18 +206,25 @@ body.gate.probing { cursor: crosshair; }
   .lock .shackle { transition: none; }
 }
 
-/* trigger outcome, placed under the detector by gate.js */
-.gate-alert { position: fixed; z-index: 2; transform: translate(-50%, 0) scale(.96); opacity: 0;
-  pointer-events: none; text-align: center; padding: 10px 22px; border: 1px solid transparent;
-  background: rgba(1, 3, 6, .82); transition: opacity .25s ease, transform .25s ease; }
-.gate-alert.show { opacity: 1; transform: translate(-50%, 0) scale(1); }
+/* trigger outcome, placed at the CENTRE of the wheel by gate.js: the verdict
+   belongs at the interaction point, not below the detector. */
+.gate-alert { position: fixed; z-index: 2; transform: translate(-50%, -50%) scale(.94); opacity: 0;
+  pointer-events: none; text-align: center; padding: 14px 26px 0; border: 1px solid transparent;
+  background: rgba(1, 3, 6, .88); backdrop-filter: blur(3px); min-width: min(360px, 26vw);
+  transition: opacity .25s ease, transform .25s ease; }
+.gate-alert.show { opacity: 1; transform: translate(-50%, -50%) scale(1); }
 .gate-alert b { display: block; font-family: var(--display); font-weight: 900; font-size: clamp(18px, 2.2vw, 30px);
   letter-spacing: .16em; text-transform: uppercase; }
-.gate-alert span { display: block; font-size: 12px; color: var(--ink-2); margin-top: 4px; }
-.gate-alert.ok { border-color: var(--cyan); box-shadow: 0 0 34px -6px rgba(63, 195, 255, .6); }
-.gate-alert.ok b { color: var(--cyan); text-shadow: 0 0 18px rgba(63, 195, 255, .7); }
-.gate-alert.bad { border-color: var(--drop); box-shadow: 0 0 34px -6px rgba(227, 38, 46, .6); }
+.gate-alert span { display: block; font-size: 12px; color: var(--ink-2); margin: 4px 0 12px; }
+.gate-alert i { display: block; font-style: normal; font-family: var(--mono); font-size: 13px;
+  letter-spacing: .22em; text-transform: uppercase; padding: 9px 0 10px;
+  border-top: 1px solid currentColor; }
+.gate-alert.ok { border-color: var(--win); box-shadow: 0 0 46px -6px var(--win-glow); }
+.gate-alert.ok b { color: var(--win); text-shadow: 0 0 18px var(--win-glow); }
+.gate-alert.ok i { color: #8BF3BC; background: rgba(67, 224, 140, .15); }
+.gate-alert.bad { border-color: var(--drop); box-shadow: 0 0 44px -6px rgba(227, 38, 46, .7); }
 .gate-alert.bad b { color: #FF5A55; text-shadow: 0 0 18px rgba(227, 38, 46, .7); }
+.gate-alert.bad i { color: #FF8A84; background: rgba(227, 38, 46, .14); }
 
 /* detector rumble on a rejected trigger */
 #det.rumble { animation: rumble .6s cubic-bezier(.36, .07, .19, .97) both; }

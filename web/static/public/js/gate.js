@@ -1,4 +1,4 @@
-/* gate.js -- sign-in page only. mk12.
+/* gate.js -- sign-in page only. mk17.
    A transverse (r-phi) view of a barrel detector drawn in the browser.
 
    Load:        the detector lights up in a spiral sweep, then idles "at rest":
@@ -17,7 +17,9 @@
                 black and the dashboard opens with a single line wipe that reveals
                 it (arrive.js).
      wrong   -> an ordinary event with no displaced vertex. The detector rumbles,
-                the muon system flashes red, the console reads STATUS: REJECTED.
+                the muon system flashes red, the console reads STATUS: REJECTED,
+                and after the verdict the detector RESETS -- swept back up empty,
+                ready for another attempt.
    Every event is illustrative, generated in the browser, and labelled as not data.
    Reduced motion: still frames only, same alerts, no wipe. Without JavaScript the
    form posts normally. */
@@ -118,6 +120,22 @@
   const qa = a => Math.round(a * QSTEPS) / QSTEPS;
   const jitter = (i, k) => 0.70 + 0.45 * fract(Math.sin(i * 97.13 + k * 31.77) * 43758.5453);
 
+  /* Brilliance. The resting structure is drawn muted; whatever lights up gets a
+     radial bloom on top of its pixels, composited additively so overlapping
+     sources stack the way light does. One gradient fill per source -- far
+     cheaper than a shadowBlur on every block. */
+  function glowSpot(x, y, r, col, a) {
+    if (a <= 0.01 || r <= 0) return;
+    const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+    g.addColorStop(0, `rgba(${col},${Math.min(1, a)})`);
+    g.addColorStop(0.42, `rgba(${col},${Math.min(1, a) * 0.26})`);
+    g.addColorStop(1, `rgba(${col},0)`);
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+    ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fillStyle = g; ctx.fill();
+    ctx.restore();
+  }
+
   // an annular sector (calorimeter cells, ring segments) as pixel blocks
   function pixelSector(r0, r1, a0, a1, col, peak, gx, gy, rad) {
     const rm = (r0 + r1) / 2;
@@ -169,8 +187,9 @@
     const d = Math.hypot(g[0] - x, g[1] - y) / (rad || Math.max(w, h) * 0.62);
     const edge = peak * Math.exp(-1.7 * d * d);
     if (edge < 0.05) return;
-    ctx.save(); ctx.shadowBlur = 26; ctx.shadowColor = `rgba(${col},${edge})`;
-    chamber(s, k, null, `rgba(255,255,255,${0.8 * edge})`);
+    glowSpot(x, y, Math.max(w, h) * 1.5, col, 0.8 * edge);
+    ctx.save(); ctx.shadowBlur = 36; ctx.shadowColor = `rgba(${col},${edge})`;
+    chamber(s, k, null, `rgba(255,255,255,${0.95 * edge})`);
     ctx.restore();
   }
 
@@ -258,31 +277,31 @@
   function draw(sweep, e, t, rej) {
     ctx.clearRect(0, 0, W, H);
     ctx.globalAlpha = faint;
-    ring(0.012, 1, C.beam, 1.4);
-    idPixels(sweep, 0, 0.42, false);                     // unlit module bed
-    ring(G.solenoid, sweep, `rgba(${C.tile},.55)`, 1.2);
+    ring(0.012, 1, "rgba(94,114,136,.55)", 1.4);
+    idPixels(sweep, 0, 0.18, false);                     // unlit module bed
+    ring(G.solenoid, sweep, `rgba(${C.tile},.23)`, 1.2);
     const nOn = Math.floor(sweep * G.ncell);
     for (let k = 0; k < nOn; k++) {
-      cell(G.em[0], G.em[1], k, G.ncell, `rgba(${C.em},.028)`, `rgba(${C.em},.22)`);
+      cell(G.em[0], G.em[1], k, G.ncell, `rgba(${C.em},.012)`, `rgba(${C.em},.085)`);
       for (let l = 0; l < 3; l++) {
         const a = G.tile[0] + (G.tile[1] - G.tile[0]) * l / 3, b = G.tile[0] + (G.tile[1] - G.tile[0]) * (l + 1) / 3;
-        cell(a, b, k, G.ncell, `rgba(${C.tile},.10)`, `rgba(${C.tile},.30)`);
+        cell(a, b, k, G.ncell, `rgba(${C.tile},.035)`, `rgba(${C.tile},.12)`);
       }
     }
     for (let k = 0; k < 8; k++) {
       if (k / 8 >= sweep) break;
       const phi = (k + 0.5) / 8 * TAU, [x0, y0] = P(G.coils[0], phi), [x1, y1] = P(G.coils[1], phi);
-      ctx.beginPath(); ctx.strokeStyle = `rgba(${C.coil},.34)`; ctx.lineWidth = 6; ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
+      ctx.beginPath(); ctx.strokeStyle = `rgba(${C.coil},.15)`; ctx.lineWidth = 6; ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
     }
     const chOn = Math.floor(sweep * G.nch);
     const {muHit, vHit} = hitSets(e);
     for (let s = 0; s < 3; s++) for (let k = 0; k < chOn; k++) {
       const key = `${s}:${k}`;
-      let fill = `rgba(${C.chamber},.15)`;
-      if (e && muHit.has(key) && t > 1350) fill = `rgba(${C.hit},${.75 * ramp(t, 1350, 1600)})`;
-      if (e && vHit.has(key) && t > 1550) fill = `rgba(${C.hit},${.85 * ramp(t, 1550, 1850)})`;
+      let fill = `rgba(${C.chamber},.05)`;
+      if (e && muHit.has(key) && t > 1350) fill = `rgba(${C.hit},${.92 * ramp(t, 1350, 1600)})`;
+      if (e && vHit.has(key) && t > 1550) fill = `rgba(${C.hit},${ramp(t, 1550, 1850)})`;
       if (rej) fill = `rgba(${C.muon},.28)`;
-      chamber(s, k, fill, rej ? `rgba(${C.muon},.95)` : `rgba(${C.chamber},.78)`);
+      chamber(s, k, fill, rej ? `rgba(${C.muon},.95)` : `rgba(${C.chamber},.32)`);
     }
     if (!e) { ctx.globalAlpha = 1; return; }
     // calorimeter deposits
@@ -346,7 +365,8 @@
           ctx.beginPath(); ctx.strokeStyle = `rgba(${C.llp},.95)`; ctx.lineWidth = 1.6;
           ctx.moveTo(x0, y0); ctx.lineTo(x0 + tl.len * f * R * Math.cos(tl.phi), y0 - tl.len * f * R * Math.sin(tl.phi)); ctx.stroke();
         });
-        ctx.beginPath(); ctx.fillStyle = `rgba(${C.track},${vf})`; ctx.arc(x0, y0, 3.2, 0, TAU); ctx.fill();
+        glowSpot(x0, y0, 0.16 * R, C.llp, 0.8 * vf);
+        ctx.beginPath(); ctx.fillStyle = `rgba(${C.track},${vf})`; ctx.arc(x0, y0, 3.6, 0, TAU); ctx.fill();
       }
     }
     // missing ET
@@ -363,7 +383,8 @@
     if (!e || e.llp === null) return;
     const [vx, vy] = P(e.rv, e.llp);
     ctx.globalAlpha = faint;
-    ctx.beginPath(); ctx.strokeStyle = `rgba(${C.track},${0.25 + 0.55 * pulse})`; ctx.lineWidth = 1.4;
+    glowSpot(vx, vy, 0.13 * R, C.track, 0.30 + 0.30 * pulse);
+    ctx.beginPath(); ctx.strokeStyle = `rgba(${C.track},${0.35 + 0.6 * pulse})`; ctx.lineWidth = 1.6;
     ctx.arc(vx, vy, 9 + 7 * (1 - pulse), 0, TAU); ctx.stroke();
     ctx.font = '11px "Share Tech Mono", monospace'; ctx.fillStyle = `rgba(${C.track},.9)`;
     const right = Math.cos(e.llp) >= 0;
@@ -407,12 +428,12 @@
   function drawFx(now, quiet) {
     ctx.globalAlpha = faint;
     // inner detector: the module bed lit by a slow gradient, layer by layer
-    idPixels(1, now, 1, true);
+    idPixels(1, now, 0.46, true);
     // toroid coils breathing
     const br = 0.5 + 0.5 * Math.sin(now / 6000 * TAU);
     for (let k = 0; k < 8; k++) {
       const phi = (k + 0.5) / 8 * TAU, [x0, y0] = P(G.coils[0], phi), [x1, y1] = P(G.coils[1], phi);
-      ctx.beginPath(); ctx.strokeStyle = `rgba(${C.coil},${0.05 + 0.10 * br})`; ctx.lineWidth = 10;
+      ctx.beginPath(); ctx.strokeStyle = `rgba(${C.coil},${0.020 + 0.042 * br})`; ctx.lineWidth = 10;
       ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
     }
     // calorimeter noise cells -- rare
@@ -433,9 +454,10 @@
       const a0 = c.k / G.ncell * TAU, a1 = (c.k + 1) / G.ncell * TAU;
       const [gx, gy] = P((lo + hi) / 2, (a0 + a1) / 2);
       // the deposit blooms outward from the middle of the cell, in pixel steps
-      pixelSector(lo, hi, a0, a1, col, 1.05 * a, gx, gy, (hi - lo) * R * 1.15);
-      ctx.save(); ctx.shadowBlur = 26; ctx.shadowColor = `rgba(${col},${a})`;
-      cell(lo, hi, c.k, G.ncell, null, `rgba(255,255,255,${0.5 * a})`);   // hot edge
+      pixelSector(lo, hi, a0, a1, col, 1.3 * a, gx, gy, (hi - lo) * R * 1.15);
+      glowSpot(gx, gy, (hi - lo) * R * 2.6, col, 0.85 * a);
+      ctx.save(); ctx.shadowBlur = 34; ctx.shadowColor = `rgba(${col},${a})`;
+      cell(lo, hi, c.k, G.ncell, null, `rgba(255,255,255,${0.72 * a})`);   // hot edge
       ctx.restore();
     });
     // stray muon-chamber hits -- rare
@@ -457,7 +479,7 @@
         const {phi, off} = fx.cosmic, d = [Math.cos(phi), Math.sin(phi)], n = [-d[1], d[0]], L = 1.05;
         const a = [off * n[0] + L * d[0], off * n[1] + L * d[1]];
         const b = [off * n[0] - L * d[0] * (2 * grow - 1), off * n[1] - L * d[1] * (2 * grow - 1)];
-        ctx.save(); ctx.shadowBlur = 24; ctx.shadowColor = `rgba(${C.muon},${fade})`;
+        ctx.save(); ctx.shadowBlur = 34; ctx.shadowColor = `rgba(${C.muon},${fade})`;
         ctx.beginPath(); ctx.strokeStyle = `rgba(${C.muon},${0.95 * fade})`; ctx.lineWidth = 2.2;
         ctx.moveTo(cx + a[0] * R, cy - a[1] * R); ctx.lineTo(cx + b[0] * R, cy - b[1] * R); ctx.stroke();
         ctx.shadowColor = `rgba(${C.hit},${fade})`; ctx.shadowBlur = 30;
@@ -509,6 +531,7 @@
     const peak = Math.min(1, 0.95 + 0.12 * Math.sin(now / 420));
     ctx.save();
     ctx.globalAlpha = faint;
+    glowSpot(gx, gy, rad * 1.25, c.col, 0.5 * peak);
     if (c.kind === "id") {
       const m = G.idMods[c.i], r = G.idRings[c.i], arc = TAU / m.n * 0.74;
       const k0 = Math.round(c.phi / TAU * m.n), span = Math.ceil(m.n * 0.22);
@@ -619,6 +642,18 @@
     raf = requestAnimationFrame(loop);
   }
 
+  /* A rejected trigger clears the event and rebuilds the detector from nothing,
+     the same sweep the page opens with -- the display comes back up empty,
+     ready for another attempt. */
+  function resetDetector() {
+    ev = null; cache = null; idleBase = null;
+    if (alertEl) alertEl.className = "gate-alert";
+    if (reduce) { mode = "idle"; draw(1, null, 0, false); return; }
+    mode = "sweep"; t0 = performance.now();
+    if (raf) { cancelAnimationFrame(raf); raf = null; }
+    raf = requestAnimationFrame(loop);
+  }
+
   function redrawStill() {
     if (mode === "sweep" || mode === "idle") draw(1, null, 0, false);
     else { draw(1, ev, EV_END, false); vertexRing(ev, 1); }
@@ -639,14 +674,17 @@
   // --------------------------------------------------------------- alert ----
   function placeAlert() {
     if (!alertEl) return;
+    // dead centre of the wheel: the verdict belongs at the interaction point
     alertEl.style.left = `${cx}px`;
-    alertEl.style.top = `${W >= 900 ? Math.min(cy + R * 0.62, H - 96) : cy - 24}px`;
+    alertEl.style.top = `${cy}px`;
   }
   function showAlert(ok) {
     alertEl.className = `gate-alert show ${ok ? "ok" : "bad"}`;
     alertEl.querySelector("b").textContent = ok ? "LLP detected" : "no LLP detected";
-    alertEl.querySelector("span").textContent = ok ? "MS displaced vertex found. Opening the dashboard."
-                                                   : "No displaced vertex. Password rejected.";
+    alertEl.querySelector("span").textContent = ok ? "MS displaced vertex found."
+                                                   : "No displaced vertex.";
+    const v = alertEl.querySelector("i");
+    if (v) v.textContent = ok ? "log in successful" : "log in unsuccessful";
   }
   function rumble() {
     if (reduce) return;
@@ -697,6 +735,10 @@
   const say = (t, cls) => { if (window.CRT) window.CRT.line(t, cls); };
 
   const STATES = {
+    out: {
+      tone: "idle", plate: "locked", meta: "locked", note: "gate locked", cls: "",
+      lines: [["detector .... reset", "dim"], ["STATUS: SIGNED OUT", "hot"]],
+    },
     busy: {
       tone: "busy", plate: "trigger fired", meta: "checking", note: "checking password", cls: "",
       lines: [["> auth: sending", "dim"], ["trigger ..... fired", "dim"]],
@@ -773,6 +815,9 @@
         rumble();
         pw.value = "";
         setTimeout(() => { busy = false; btn.disabled = false; pw.focus(); }, 900);
+        // the whole gate goes back to rest together: detector, console, lock,
+        // plate word and run block
+        setTimeout(() => { resetDetector(); setState("out"); }, 2600);
       }
     });
   });
