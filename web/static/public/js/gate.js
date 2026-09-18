@@ -1,4 +1,4 @@
-/* gate.js -- sign-in page only. mk17.
+/* gate.js -- sign-in page only. mk19.
    A transverse (r-phi) view of a barrel detector drawn in the browser.
 
    Load:        the detector lights up in a spiral sweep, then idles "at rest":
@@ -6,6 +6,10 @@
                 edge-glowing activity over it -- occasional calorimeter cells,
                 stray chamber hits, a pixelated readout gradient circling the
                 inner detector layers, the toroid breathing, a rare cosmic muon.
+   Typing:      a password in the field arms the detector -- the whole resting
+                structure rises out of the dark to standby, because it is about
+                to fire one way or the other. Emptying the field stands it back
+                down and clears any leftover rejection.
    Hover:       the pointer probes the detector. Whatever is under it -- an inner
                 detector layer, a calorimeter band, a muon station, a toroid coil --
                 lights in a quantised pixel gradient centred on the cursor, and is
@@ -38,6 +42,7 @@
   const TAU = Math.PI * 2;
   const SWEEP_MS = 900, EV_START = 650, EV_END = 2100, EV_SPEED = 1.7;
   let W, H, cx, cy, R, dpr, faint = 1;
+  let arm = 0, armNow = 0;            // 0 at rest, 1 with a password in the field
   let ev = null, mode = "sweep", t0 = 0, evStart = 0, rejectUntil = 0, raf = null, cache = null, idleBase = null, onEventDone = null;
 
   const G = {
@@ -277,31 +282,38 @@
   function draw(sweep, e, t, rej) {
     ctx.clearRect(0, 0, W, H);
     ctx.globalAlpha = faint;
-    ring(0.012, 1, "rgba(94,114,136,.55)", 1.4);
-    idPixels(sweep, 0, 0.18, false);                     // unlit module bed
-    ring(G.solenoid, sweep, `rgba(${C.tile},.23)`, 1.2);
+    /* The resting structure sits very dark and rises with armNow: once there is
+       a password in the field the detector is about to fire one way or the
+       other, so it comes up to standby. L multiplies every resting weight --
+       nothing that LIGHTS uses it, so hits stay exactly as bright either way
+       and only the floor moves. */
+    const L = 1 + 2.2 * armNow;
+    const A = a => Math.min(1, a * L).toFixed(3);
+    ring(0.012, 1, `rgba(94,114,136,${A(.35)})`, 1.4);
+    idPixels(sweep, 0, 0.115 * L, false);                     // unlit module bed
+    ring(G.solenoid, sweep, `rgba(${C.tile},${A(.15)})`, 1.2);
     const nOn = Math.floor(sweep * G.ncell);
     for (let k = 0; k < nOn; k++) {
-      cell(G.em[0], G.em[1], k, G.ncell, `rgba(${C.em},.012)`, `rgba(${C.em},.085)`);
+      cell(G.em[0], G.em[1], k, G.ncell, `rgba(${C.em},${A(.008)})`, `rgba(${C.em},${A(.055)})`);
       for (let l = 0; l < 3; l++) {
         const a = G.tile[0] + (G.tile[1] - G.tile[0]) * l / 3, b = G.tile[0] + (G.tile[1] - G.tile[0]) * (l + 1) / 3;
-        cell(a, b, k, G.ncell, `rgba(${C.tile},.035)`, `rgba(${C.tile},.12)`);
+        cell(a, b, k, G.ncell, `rgba(${C.tile},${A(.022)})`, `rgba(${C.tile},${A(.075)})`);
       }
     }
     for (let k = 0; k < 8; k++) {
       if (k / 8 >= sweep) break;
       const phi = (k + 0.5) / 8 * TAU, [x0, y0] = P(G.coils[0], phi), [x1, y1] = P(G.coils[1], phi);
-      ctx.beginPath(); ctx.strokeStyle = `rgba(${C.coil},.15)`; ctx.lineWidth = 6; ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
+      ctx.beginPath(); ctx.strokeStyle = `rgba(${C.coil},${A(.095)})`; ctx.lineWidth = 6; ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
     }
     const chOn = Math.floor(sweep * G.nch);
     const {muHit, vHit} = hitSets(e);
     for (let s = 0; s < 3; s++) for (let k = 0; k < chOn; k++) {
       const key = `${s}:${k}`;
-      let fill = `rgba(${C.chamber},.05)`;
+      let fill = `rgba(${C.chamber},${A(.032)})`;
       if (e && muHit.has(key) && t > 1350) fill = `rgba(${C.hit},${.92 * ramp(t, 1350, 1600)})`;
       if (e && vHit.has(key) && t > 1550) fill = `rgba(${C.hit},${ramp(t, 1550, 1850)})`;
       if (rej) fill = `rgba(${C.muon},.28)`;
-      chamber(s, k, fill, rej ? `rgba(${C.muon},.95)` : `rgba(${C.chamber},.32)`);
+      chamber(s, k, fill, rej ? `rgba(${C.muon},.95)` : `rgba(${C.chamber},${A(.20)})`);
     }
     if (!e) { ctx.globalAlpha = 1; return; }
     // calorimeter deposits
@@ -428,12 +440,13 @@
   function drawFx(now, quiet) {
     ctx.globalAlpha = faint;
     // inner detector: the module bed lit by a slow gradient, layer by layer
-    idPixels(1, now, 0.46, true);
+    const L = 1 + 2.2 * armNow;
+    idPixels(1, now, 0.30 * L, true);
     // toroid coils breathing
     const br = 0.5 + 0.5 * Math.sin(now / 6000 * TAU);
     for (let k = 0; k < 8; k++) {
       const phi = (k + 0.5) / 8 * TAU, [x0, y0] = P(G.coils[0], phi), [x1, y1] = P(G.coils[1], phi);
-      ctx.beginPath(); ctx.strokeStyle = `rgba(${C.coil},${0.020 + 0.042 * br})`; ctx.lineWidth = 10;
+      ctx.beginPath(); ctx.strokeStyle = `rgba(${C.coil},${(0.013 + 0.027 * br) * L})`; ctx.lineWidth = 10;
       ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
     }
     // calorimeter noise cells -- rare
@@ -588,6 +601,21 @@
     ctx.globalAlpha = 1;
   }
 
+  /* armNow chases arm exponentially; while it is moving the cached base frame is
+     stale, so the caller drops it and redraws. Returns true while in motion. */
+  function stepArm() {
+    if (armNow === arm) return false;
+    armNow += (arm - armNow) * 0.14;
+    if (Math.abs(arm - armNow) < 0.004) armNow = arm;
+    return true;
+  }
+  function setArm(v) {
+    if (arm === v) return;
+    arm = v;
+    if (reduce) { armNow = v; idleBase = null; cache = null; redrawStill(); return; }
+    kick();
+  }
+
   function loop(now) {
     raf = null;
     if (mode === "sweep") {
@@ -601,6 +629,7 @@
     if (mode === "idle") {
       if (now - lastFx >= FX_FRAME_MS) {
         lastFx = now;
+        if (stepArm()) idleBase = null;              // the floor moved; rebuild it
         if (!idleBase) { draw(1, null, 0, false); idleBase = snapshot(); }
         blit(idleBase);
         drawFx(now);
@@ -623,6 +652,7 @@
       if (rej) { draw(1, ev, EV_END, true); if (!raf) raf = requestAnimationFrame(loop); return; }
       if (now - lastFx >= FX_FRAME_MS) {
         lastFx = now;
+        if (stepArm()) cache = null;
         if (!cache) { draw(1, ev, EV_END, false); cache = snapshot(); }
         blit(cache);
         drawFx(now, true);
@@ -730,7 +760,6 @@
   const crtEl = document.getElementById("crt");
   const crtLines = document.getElementById("crt-lines");
   const rdNote = document.getElementById("rd-note");
-  const stateEl = document.getElementById("gate-state");
   const metaEl = document.getElementById("gate-meta-state");
   const say = (t, cls) => { if (window.CRT) window.CRT.line(t, cls); };
 
@@ -765,7 +794,6 @@
     if (window.CRT) window.CRT.tone(st.tone);
     st.lines.forEach(([t, c]) => say(t, c));
     if (rdNote) rdNote.textContent = st.note;
-    if (stateEl) stateEl.textContent = st.plate;
     if (metaEl) metaEl.textContent = st.meta;
     if (form) {
       form.classList.remove("open", "denied");
@@ -787,12 +815,106 @@
     else say("STATUS: SIGNED OUT", "hot");
   }
 
+  // -------------------------------------------------------- the button ----
+  /* Static on the button face. Hover runs it continuously and thin -- every cell
+     re-rolled every frame, light and dark speckle both, kept faint enough to
+     read the label through. Click drives the same field to full: coarser cells,
+     near-opaque, the button goes to all static and then falls back to whatever
+     the pointer is doing. Nothing travels; only the strength changes. */
+  const pxCv = document.getElementById("btn-px");
+  const btnWrap = document.querySelector(".btn-wrap");
+  const PX_HAZE = 6, PX_FIRE = 13;            // cell size in CSS px at each end
+  const HOVER_LVL = 0.30;
+  let lvl = 0, hovering = false, pxRaf = null, field = 0;
+
+  const hash = (i, r) => {
+    const x = Math.sin(i * 127.1 + r * 311.7) * 43758.5453;
+    return x - Math.floor(x);
+  };
+  const pxTarget = () => (hovering ? HOVER_LVL : 0);
+
+  function pxFrame() {
+    pxRaf = null;
+    if (!pxCv || !btnWrap) return;
+    const r = btnWrap.getBoundingClientRect();
+    if (!r.width) return;
+    const d2 = window.devicePixelRatio || 1;
+    if (pxCv.width !== Math.round(r.width * d2)) {
+      pxCv.width = Math.round(r.width * d2); pxCv.height = Math.round(r.height * d2);
+    }
+    const g = pxCv.getContext("2d");
+    g.setTransform(d2, 0, 0, d2, 0, 0);
+
+    // up fast, down fast: this is a button, not a mood
+    const target = pxTarget();
+    lvl += (target - lvl) * (lvl > HOVER_LVL ? 0.16 : 0.30);
+    if (Math.abs(target - lvl) < 0.008) lvl = target;
+
+    g.clearRect(0, 0, r.width, r.height);
+    if (lvl <= 0.008) { pxCv.classList.remove("run"); return; }
+    pxCv.classList.add("run");
+
+    const over = Math.max(0, (lvl - HOVER_LVL) / (1 - HOVER_LVL));
+    const px = PX_HAZE + (PX_FIRE - PX_HAZE) * over;
+    const cols = Math.max(1, Math.round(r.width / px)), rows = Math.max(1, Math.round(r.height / px));
+    const cw = r.width / cols, ch = r.height / rows;
+    const peak = 0.06 + 0.98 * lvl;           // hover ~0.35 ceiling, fired ~1: total
+
+    field++;                                  // a fresh field every frame: static
+    for (let x = 0; x < cols; x++) for (let y = 0; y < rows; y++) {
+      const n = hash(x * rows + y, field);
+      // quantised to four levels, weighted dim, so it grains rather than glares
+      const a = Math.round(Math.pow(n, 1.6) * peak * 4) / 4;
+      if (a < 0.04) continue;
+      g.fillStyle = n < 0.46 ? `rgba(0,0,0,${(a * 0.62).toFixed(3)})`        // dark speckle
+                   : n < 0.86 ? `rgba(255,186,194,${(a * 0.72).toFixed(3)})`
+                              : `rgba(255,255,255,${a.toFixed(3)})`;
+      g.fillRect(x * cw, y * ch, cw, ch);
+    }
+    if (over > 0) {                           // the wash that takes it to "all static"
+      g.fillStyle = `rgba(226,232,240,${(0.24 * over).toFixed(3)})`;
+      g.fillRect(0, 0, r.width, r.height);
+    }
+    if (lvl > 0.008) pxKick();                // hover keeps it running continuously
+  }
+  function pxKick() { if (!pxRaf && !reduce) pxRaf = requestAnimationFrame(pxFrame); }
+
+  if (btnWrap && !reduce) {
+    btnWrap.addEventListener("mouseenter", () => { hovering = true; pxKick(); });
+    btnWrap.addEventListener("mouseleave", () => { hovering = false; pxKick(); });
+    if (btn) {
+      btn.addEventListener("focus", () => { hovering = true; pxKick(); });
+      btn.addEventListener("blur", () => { hovering = false; pxKick(); });
+    }
+  }
+
+  function buttonBurst() {
+    if (!pxCv || !btnWrap || reduce) return;
+    btnWrap.classList.remove("firing"); void btnWrap.offsetWidth;
+    btnWrap.classList.add("firing");
+    lvl = 1;                                  // same field, driven all the way up
+    pxKick();
+  }
+
   // ------------------------------------------------------------- sign in ----
+  /* Typing arms the detector; emptying the field puts everything back. An empty
+     box means the user has abandoned the attempt, so a leftover rejection is
+     cleared out with it rather than sitting there until the next submit. */
+  if (pw && form) {
+    const onField = () => {
+      const has = pw.value.length > 0;
+      setArm(has ? 1 : 0);
+      if (!has && form.classList.contains("denied")) { resetDetector(); setState("out"); }
+    };
+    pw.addEventListener("input", onField);
+  }
+
   let busy = false;
   if (form) form.addEventListener("submit", async e => {
     e.preventDefault();
     if (busy) return;
     busy = true; btn.disabled = true;
+    buttonBurst();
     alertEl.className = "gate-alert";
     setState("busy");
     let res;
@@ -813,7 +935,8 @@
       } else {
         setState("bad");
         rumble();
-        pw.value = "";
+        pw.value = "";                                   // placeholder returns
+        setArm(0);                                       // and the detector stands down
         setTimeout(() => { busy = false; btn.disabled = false; pw.focus(); }, 900);
         // the whole gate goes back to rest together: detector, console, lock,
         // plate word and run block

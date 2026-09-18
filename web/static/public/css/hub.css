@@ -1,0 +1,158 @@
+/* hub.css -- the navigation surface. Loaded after pfd.css, on the hub only.
+
+   The hub has no nav rail and no title block -- base.html leaves both out for
+   this page -- so the sheet's frame is a single column here and the TV sits in
+   the page's own top-left corner.
+
+   Three sets, not four panels in a grid:
+     the RAIL   (TV over console) -- its own column, never moves
+     the BAND   (small cards)     -- the selector strip across the top
+     the STAGE  (deck or screen)  -- everything else
+
+   The rail is a set because its two slots belong together and stay put; the
+   band and the stage swap content, the rail doesn't. */
+
+body[data-page="hub"] .frame { grid-template-columns: minmax(0, 1fr); }
+
+.hub { display: grid; gap: 16px;
+  grid-template-columns: minmax(238px, 21vw) minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-areas: "rail band" "rail stage";
+  align-items: stretch; }
+.rail { grid-area: rail; display: grid; gap: 16px; align-content: start;
+  grid-template-rows: auto minmax(0, 1fr); }
+/* empty on purpose: the command board (toggle / back / etc) goes here */
+.rail-slot { min-height: 0; }
+.band { grid-area: band; }
+.stage { grid-area: stage; min-height: clamp(360px, 46vh, 560px); display: grid; }
+
+/* --------------------------------------------------------------- the TV -- */
+.tv-screen { position: relative; aspect-ratio: 4 / 3; overflow: hidden;
+  background: radial-gradient(120% 130% at 50% 45%, #0A1622 0%, #02060B 72%, #000 100%);
+  border: 1px solid var(--rule-hi); border-bottom: 0;
+  box-shadow: inset 0 0 40px -10px rgba(63, 195, 255, .30); }
+.tv-screen img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
+  opacity: 0; transition: opacity .28s linear; }
+.tv-screen img.on { opacity: .92; }
+.tv-screen canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.tv-glass { position: absolute; inset: 0; pointer-events: none;
+  background:
+    repeating-linear-gradient(0deg, rgba(0, 0, 0, .30) 0 1px, transparent 1px 3px),
+    radial-gradient(130% 130% at 50% 50%, transparent 48%, rgba(0, 0, 0, .62) 100%); }
+.tv-osd { position: absolute; left: 8px; right: 8px; bottom: 6px; display: flex;
+  justify-content: space-between; gap: 10px; font-family: var(--mono); font-size: 10px;
+  letter-spacing: .16em; text-transform: uppercase; color: #8BF3BC;
+  text-shadow: 0 0 8px rgba(67, 224, 140, .7); pointer-events: none; }
+.tv-osd span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tv-bezel { display: flex; align-items: center; gap: 9px; padding: 7px 10px;
+  border: 1px solid var(--rule-hi); background: var(--steel-2);
+  font-family: var(--mono); font-size: 10px; letter-spacing: .14em;
+  text-transform: uppercase; color: var(--meta); }
+.tv-lamp { width: 7px; height: 7px; border-radius: 50%; background: var(--win);
+  box-shadow: 0 0 9px var(--win-glow); animation: tv-lamp 3.4s ease-in-out infinite; }
+@keyframes tv-lamp { 50% { opacity: .35; } }
+.tv-count { margin-left: auto; }
+
+.kv { display: grid; grid-template-columns: auto 1fr; gap: 5px 12px; margin: 10px 0 0; }
+.kv dt { font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: var(--meta); }
+.kv dd { margin: 0; font-family: var(--mono); font-size: 12px; color: var(--ink);
+  overflow: hidden; text-overflow: ellipsis; }
+.hub-jump { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 13px;
+  border-top: 1px solid var(--rule); padding-top: 11px; }
+.hub-jump a { font-size: 11px; padding: 4px 8px; border: 1px solid var(--rule); }
+
+/* ---------------------------------------------------------- small cards -- */
+.band-head { display: flex; align-items: baseline; gap: 14px; }
+.band-head h2 { margin: 0; }
+#band-hint { margin-left: auto; }
+.cards { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 11px; }
+.card { display: flex; align-items: baseline; gap: 8px; padding: 7px 11px;
+  background: var(--steel-2); border: 1px solid var(--rule); color: var(--ink);
+  cursor: pointer; white-space: nowrap;
+  transition: border-color .14s ease, background .14s ease, color .14s ease; }
+.card-glyph { font-family: var(--mono); font-size: 10px; letter-spacing: .12em;
+  color: var(--accent); text-transform: uppercase; }
+.card-name { font-family: var(--display); font-weight: 700; font-size: 12.5px; letter-spacing: .05em; }
+.card:hover { border-color: var(--rule-hi); background: #0C1E30; }
+.card:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+.card[aria-selected="true"] { border-color: var(--win); background: #0A2318;
+  box-shadow: 0 0 0 1px rgba(67, 224, 140, .30); }
+.card[aria-selected="true"] .card-glyph { color: var(--win); }
+
+/* ------------------------------------------------------------- the deck -- */
+.deck-wrap { display: grid; grid-template-rows: minmax(0, 1fr) auto; gap: 10px; min-height: 0; }
+.deck-host { min-height: 0; display: grid; place-items: center; }
+.deck-stage { width: 100%; height: 100%; min-height: clamp(230px, 30vh, 340px);
+  display: grid; place-items: center; perspective: 900px; perspective-origin: 50% 46%;
+  touch-action: pan-y; cursor: grab; user-select: none; }
+.deck-stage.dragging { cursor: grabbing; }
+.deck-ring { position: relative; width: 0; height: 0; transform-style: preserve-3d;
+  will-change: transform; }
+
+.deck-face { position: absolute; left: 50%; top: 50%;
+  width: clamp(170px, 17vw, 230px); height: clamp(120px, 12vw, 158px);
+  margin-left: calc(clamp(170px, 17vw, 230px) / -2);
+  margin-top: calc(clamp(120px, 12vw, 158px) / -2);
+  display: grid; align-content: center; gap: 6px; padding: 14px 16px; text-align: left;
+  background: linear-gradient(180deg, rgba(12, 30, 48, .96), rgba(6, 16, 27, .96));
+  border: 1px solid var(--rule-hi); color: var(--ink); cursor: pointer;
+  backface-visibility: hidden; transition: border-color .18s ease, box-shadow .18s ease; }
+.df-glyph { font-family: var(--mono); font-size: 10px; letter-spacing: .16em;
+  color: var(--accent); text-transform: uppercase; }
+.df-name { font-family: var(--display); font-weight: 800; font-size: clamp(13px, 1.25vw, 17px);
+  letter-spacing: .05em; color: #fff; }
+.df-blurb { font-size: 11px; line-height: 1.4; color: var(--ink-2);
+  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.df-open { font-family: var(--mono); font-size: 10px; letter-spacing: .18em;
+  text-transform: uppercase; color: var(--win); opacity: 0; transition: opacity .18s ease; }
+.deck-face.front { border-color: var(--win);
+  box-shadow: 0 0 0 1px rgba(67, 224, 140, .35), 0 24px 50px -24px rgba(67, 224, 140, .9); }
+.deck-face.front .df-open { opacity: 1; }
+.deck-face:focus-visible { outline: 2px solid var(--cyan); outline-offset: 3px; }
+
+.deck-controls { display: flex; align-items: center; justify-content: center; gap: 12px;
+  border-top: 1px solid var(--rule); padding-top: 11px; }
+.step { background: var(--steel-2); border: 1px solid var(--rule-hi); padding: 7px 11px;
+  cursor: pointer; line-height: 0; }
+.step svg { width: 17px; height: 23px; }
+.step polygon { fill: none; stroke: var(--ink-2); stroke-width: 2; stroke-linejoin: round; }
+.step:hover { border-color: var(--win); }
+.step:hover polygon { stroke: var(--win); }
+.step:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+.deck-read { min-width: clamp(140px, 16vw, 230px); text-align: center; }
+.deck-read b { display: block; font-family: var(--display); font-size: clamp(14px, 1.4vw, 19px);
+  letter-spacing: .05em; color: #fff; }
+.deck-read span { font-family: var(--mono); font-size: 10px; letter-spacing: .16em; color: var(--meta); }
+.deck-controls .go { padding: 9px 24px; font-family: var(--display); font-weight: 800;
+  letter-spacing: .18em; font-size: 13px; }
+
+/* ----------------------------------------------------------- the screen -- */
+/* Visibility is driven by data-state alone. `.screen { display: grid }` at
+   (0,1,0) outranks the UA stylesheet's `[hidden] { display: none }` at (0,0,1),
+   so the hidden attribute silently did nothing and the screen sat under the
+   deck from page load -- the hidden attribute stays for assistive tech, but it
+   is not what does the hiding. */
+.hub[data-state="screen"] .deck-wrap { display: none; }
+.hub[data-state="deck"] .screen { display: none; }
+.screen[hidden] { display: none; }
+.hub[data-state="screen"] .screen { display: grid; }
+.screen { grid-template-rows: auto minmax(0, 1fr); gap: 14px; min-height: 0; }
+.screen-head { display: flex; gap: 14px; align-items: flex-start;
+  border-bottom: 1px solid var(--rule); padding-bottom: 12px; }
+.screen-title { min-width: 0; }
+.screen-head h3 { margin: 0 0 2px; font-family: var(--display); letter-spacing: .05em; }
+.screen-head .link { margin-left: auto; white-space: nowrap; }
+.screen-glyph { font-family: var(--mono); font-size: 10px; letter-spacing: .16em;
+  color: var(--win); text-transform: uppercase; border: 1px solid var(--rule-hi);
+  padding: 6px 9px; white-space: nowrap; }
+.screen-body { overflow: auto; min-height: 0; }
+
+@media (max-width: 1100px) {
+  .hub { grid-template-columns: minmax(0, 1fr); grid-template-areas: "band" "stage" "rail"; }
+  .rail { grid-template-rows: auto auto; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+}
+@media (max-width: 720px) { .rail { grid-template-columns: minmax(0, 1fr); } }
+@media (prefers-reduced-motion: reduce) {
+  .tv-lamp { animation: none; }
+  .tv-screen img, .deck-face { transition: none; }
+}

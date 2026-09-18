@@ -7,6 +7,7 @@
 <title>{{ title }} - ATLAS-Dashboard-mk_1</title>
 <link rel="icon" href="/static/public/assets/images/favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="/static/public/css/pfd.css">
+{% block head %}{% endblock %}
 </head>
 <body data-page="{{ page }}" data-mode="{{ mode }}">
 <div class="sheet">
@@ -16,6 +17,7 @@
   <button id="idle-stay" type="button">Stay signed in</button>
 </div>
 <div class="frame">
+  {% if page != 'hub' %}
   <nav class="plates" aria-label="Pages">
     <div class="brand">
       <img class="brand-mark" src="/static/public/assets/images/proton_2_256.png" alt="" aria-hidden="true">
@@ -27,12 +29,13 @@
     {% endfor %}
     <form method="post" action="/logout"><button type="submit" class="link">Sign out</button></form>
   </nav>
+  {% endif %}
   <main>
-    <h1>{{ title }}</h1>
+    {% if page != 'hub' %}<h1>{{ title }}</h1>{% endif %}
     {% block main %}{% endblock %}
   </main>
 </div>
-<aside class="titleblock" aria-label="Sheet provenance">
+{% if page != 'hub' %}<aside class="titleblock" aria-label="Sheet provenance">
   <div class="t"><b>ATLAS-Dashboard-mk_1</b><em id="tb-mode">{{ mode|upper }}</em></div>
   <div class="c"><span>SHEET</span><strong>{{ title }}</strong></div>
   <div class="c"><span>RUNS SIGNED</span><strong id="tb-who">—</strong></div>
@@ -43,7 +46,7 @@
   <div class="c last"><span>REFERENCE</span><strong id="tb-ref">—</strong></div>
   <div class="c last"><span>SIGN-OUT IN</span><strong id="tb-idle">—</strong></div>
   <div class="c end last"><span>REV</span><strong id="tb-rev">mk4</strong></div>
-</aside>
+</aside>{% endif %}
 </div>
 <script src="/static/public/js/arrive.js"></script>
 <script src="/static/app/js/common.js"></script>

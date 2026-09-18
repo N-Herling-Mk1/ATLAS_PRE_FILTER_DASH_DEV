@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block head %}<link rel="stylesheet" href="/static/public/css/hub.css">{% endblock %}
+{% block main %}
+<div class="hub" id="hub" data-state="deck">
+
+  <!-- ===== the left rail: one set, two slots. Never moves. ===== -->
+  <div class="rail">
+    <section class="rail-tv panel" aria-label="Display">
+      <div class="tv">
+        <div class="tv-screen">
+          <img id="tv-img" alt="" aria-hidden="true">
+          <canvas id="tv-fx" aria-hidden="true"></canvas>
+          <div class="tv-glass" aria-hidden="true"></div>
+          <div class="tv-osd"><span id="tv-ch">CH --</span><span id="tv-name">no signal</span></div>
+        </div>
+        <div class="tv-bezel">
+          <span class="tv-lamp" aria-hidden="true"></span>
+          <span class="tv-tag">ATLAS&nbsp;/&nbsp;13.6&nbsp;TeV</span>
+          <span class="tv-count" id="tv-count">0 src</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- reserved: the command board (toggle / back / etc) lands here -->
+    <div class="rail-slot" aria-hidden="true"></div>
+  </div>
+
+  <!-- ===== top band: small cards, one per section. Selector, not door. ===== -->
+  <section class="band panel" aria-label="Sections">
+    <div class="band-head">
+      <h2>Sections</h2>
+      <span class="small muted" id="band-hint">card selects &middot; deck face opens</span>
+    </div>
+    <div class="cards" id="cards" role="tablist" aria-label="Sections">
+      {% for id, name, glyph, blurb in tiles %}
+      <button type="button" class="card" role="tab" aria-selected="false"
+              data-id="{{ id }}" data-name="{{ name }}" title="{{ blurb }}">
+        <span class="card-glyph" aria-hidden="true">{{ glyph }}</span>
+        <span class="card-name">{{ name }}</span>
+      </button>
+      {% endfor %}
+    </div>
+  </section>
+
+  <!-- ===== main area: the deck, or the section it opened ===== -->
+  <section class="stage panel" aria-label="Deck">
+    <div class="deck-wrap" id="deck-wrap">
+      <div class="deck-host" id="deck"></div>
+      <div class="deck-controls">
+        <button type="button" class="step prev" id="deck-prev" aria-label="Previous section">
+          <svg viewBox="0 0 22 30" aria-hidden="true"><polygon points="20,2 20,28 2,15"></polygon></svg>
+        </button>
+        <div class="deck-read">
+          <b id="deck-name">&mdash;</b>
+          <span id="deck-idx">1 / {{ tiles|length }}</span>
+        </div>
+        <button type="button" class="step next" id="deck-next" aria-label="Next section">
+          <svg viewBox="0 0 22 30" aria-hidden="true"><polygon points="2,2 2,28 20,15"></polygon></svg>
+        </button>
+        <button type="button" class="primary go" id="deck-go">Open</button>
+      </div>
+    </div>
+
+    <div class="screen" id="screen" hidden>
+      <div class="screen-head">
+        <span class="screen-glyph" id="screen-glyph" aria-hidden="true"></span>
+        <div class="screen-title">
+          <h3 id="screen-name">&mdash;</h3>
+          <p class="small muted" id="screen-blurb">&mdash;</p>
+        </div>
+        <button type="button" class="link" id="screen-back">&larr; Back to deck</button>
+      </div>
+      <div class="screen-body" id="screen-body">
+        <p class="small muted">This section has no sheet yet. Opening it here is the navigation
+          working; the content arrives when the sheet is built.</p>
+      </div>
+    </div>
+  </section>
+
+</div>
+{% endblock %}
+{% block scripts %}
+<script src="/static/app/js/deck.js"></script>
+<script src="/static/app/js/hub.js"></script>
+{% endblock %}

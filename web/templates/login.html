@@ -29,14 +29,20 @@
   <main class="gate-main">
     <form class="gate-plate{% if wrong %} denied{% endif %}" method="post" action="/login">
       <div class="plate-head">
+        <span class="plate-name">Welcome to the Gate</span>
+        <span class="ph-bar" aria-hidden="true">|</span>
+        <span class="ph-state" id="gate-state">
+          <span class="ph-key">STATE</span>
+          <span class="ph-dash" aria-hidden="true">&ndash;</span>
+          <em class="st-lock">LOCKED</em><span class="ph-pipe" aria-hidden="true">|</span><em class="st-open">UNLOCKED</em>
+          <span class="ph-dash" aria-hidden="true">&ndash;</span>
+        </span>
         <svg class="lock" viewBox="0 0 30 34" aria-hidden="true">
           <path class="shackle" d="M8.5 14 V10.5 a6.5 6.5 0 0 1 13 0 V14"></path>
           <rect class="body glow" x="4" y="14" width="22" height="17" rx="2"></rect>
           <circle class="key" cx="15" cy="21" r="2.1"></circle>
           <rect class="key" x="14.1" y="21.6" width="1.8" height="5.2" rx=".9"></rect>
         </svg>
-        <span class="plate-name">Welcome to the gate</span>
-        <span class="plate-state" id="gate-state">{{ 'trigger rejected' if wrong else 'locked' }}</span>
       </div>
       <div class="plate-body">
         <div class="crt tone-{{ 'bad' if wrong else 'idle' }}" id="crt"
@@ -53,10 +59,13 @@
         <noscript><b class="rd-fallback">STATUS: SIGNED OUT</b></noscript>
         {% if msg and not short %}<div class="gate-msg {% if wrong %}bad{% else %}warn{% endif %}" role="alert">{{ msg }}</div>{% endif %}
         <input type="hidden" name="next" value="{{ nxt }}">
-        <label for="pw">Password
-          <input id="pw" type="password" name="password" autocomplete="current-password" required>
-        </label>
-        <button class="primary" type="submit">Sign in</button>
+        <label class="sr-only" for="pw">Password</label>
+        <input id="pw" type="password" name="password" placeholder="ENTER PASSWORD"
+               autocomplete="current-password" required>
+        <div class="btn-wrap">
+          <button class="primary" type="submit">Sign in</button>
+          <canvas class="btn-px" id="btn-px" aria-hidden="true"></canvas>
+        </div>
       </div>
       <div class="plate-foot">Signed out after 8 hours without activity; unsaved work is discarded.</div>
     </form>
