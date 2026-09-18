@@ -138,7 +138,13 @@ def test_pages_render_logged_in(app_pw):
     for p in ("/", "/board", "/feature", "/catalogue", "/session"):
         r = c.get(p)
         assert r.status_code == 200, p
-        assert b'class="titleblock"' in r.data
+        if p == "/":
+            # mk24 took the title block off the hub on purpose; the hub's own
+            # landmarks are what prove it rendered
+            assert b'id="hub"' in r.data and b'id="gimbal"' in r.data
+            assert b'class="titleblock"' not in r.data
+        else:
+            assert b'class="titleblock"' in r.data, p
 
 
 def test_jobs_are_per_session(app_pw):

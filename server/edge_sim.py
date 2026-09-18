@@ -62,6 +62,16 @@ def make_handler(upstream_host, upstream_port, timeout_s, max_body):
                          "X-Forwarded-Proto": "https", "CF-Visitor": '{"scheme":"https"}'})
             conn = http.client.HTTPConnection(upstream_host, upstream_port, timeout=timeout_s)
             try:
+                # Connect as its own step. Cloudflare reports an origin it cannot
+                # reach as down (502), whatever the reason; only an origin that
+                # accepted the connection and then went quiet is a 524. On Windows
+                # a connect to a closed localhost port does not fail fast -- the
+                # stack retries the refused SYN for ~2 s -- so with one shared
+                # timeout a dead origin was reported as a 524.
+                try:
+                    conn.connect()
+                except OSError as e:          # refused, or timed out while connecting
+                    return self._send(502, "Bad gateway", f"origin unreachable ({e})")
                 conn.request(self.command, self.path, body=body, headers=hdrs)
                 resp = conn.getresponse()
                 data = resp.read()

@@ -3,7 +3,7 @@
 {% block main %}
 <div class="hub" id="hub" data-state="deck">
 
-  <!-- ===== the left rail: one set, two slots. Never moves. ===== -->
+  <!-- ===== the rail: TV, nav, dock. Never moves. ===== -->
   <div class="rail">
     <section class="rail-tv panel" aria-label="Display">
       <div class="tv">
@@ -21,15 +21,42 @@
       </div>
     </section>
 
-    <!-- reserved: the command board (toggle / back / etc) lands here -->
-    <div class="rail-slot" aria-hidden="true"></div>
+    <!-- nav: the pages the rail used to carry, plus sound and sign out -->
+    <section class="rail-nav panel" aria-label="Navigate">
+      <div class="rn-head">
+        <h2>Navigate</h2>
+        <!-- sound toggle: markup from nathan_herling index.html #sndToggle -->
+        <button id="sndToggle" type="button" aria-pressed="false" aria-label="Sound off" title="Sound off">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path class="spk" d="M11 4.5 6.2 8.6H3.2v6.8h3L11 19.5z"/>
+            <path class="w1" d="M14.4 9.3a4.6 4.6 0 0 1 0 5.4"/>
+            <path class="w2" d="M16.7 7.2a8 8 0 0 1 0 9.6"/>
+            <path class="w3" d="M19 5.1a11.4 11.4 0 0 1 0 13.8"/>
+            <path class="off" d="M5 19 19 5"/>
+          </svg>
+        </button>
+      </div>
+      <ul class="rn-links">
+        {% for key, href, label in pages if key != 'hub' %}
+        <li><a href="{{ href }}">{{ label }}</a></li>
+        {% endfor %}
+      </ul>
+      <form class="rn-out" method="post" action="/logout"><button type="submit">Sign out</button></form>
+    </section>
+
+    <!-- dock: the deck parks here, minimised, while a section is open -->
+    <section class="rail-dock panel" aria-label="Docked deck">
+      <div class="dock-slot" id="dock-slot">
+        <p class="dock-empty small muted" id="dock-empty">Open a section and the deck parks here. Click it to come back.</p>
+      </div>
+    </section>
   </div>
 
-  <!-- ===== top band: small cards, one per section. Selector, not door. ===== -->
+  <!-- ===== top band: section cards. Selector, not door. ===== -->
   <section class="band panel" aria-label="Sections">
     <div class="band-head">
       <h2>Sections</h2>
-      <span class="small muted" id="band-hint">card selects &middot; deck face opens</span>
+      <span class="small muted" id="band-hint">Click a card to select it. Double-click to open.</span>
     </div>
     <div class="cards" id="cards" role="tablist" aria-label="Sections">
       {% for id, name, glyph, blurb in tiles %}
@@ -46,18 +73,37 @@
   <section class="stage panel" aria-label="Deck">
     <div class="deck-wrap" id="deck-wrap">
       <div class="deck-host" id="deck"></div>
-      <div class="deck-controls">
-        <button type="button" class="step prev" id="deck-prev" aria-label="Previous section">
-          <svg viewBox="0 0 22 30" aria-hidden="true"><polygon points="20,2 20,28 2,15"></polygon></svg>
-        </button>
-        <div class="deck-read">
-          <b id="deck-name">&mdash;</b>
-          <span id="deck-idx">1 / {{ tiles|length }}</span>
+
+      <div class="deck-console">
+        <!-- the control box: gimbal over the two steps -->
+        <div class="ctl-box">
+          <svg class="gimbal" id="gimbal" viewBox="0 0 120 120" role="slider" tabindex="0"
+               aria-label="Turn the deck" aria-valuemin="1" aria-valuemax="{{ tiles|length }}" aria-valuenow="1">
+            <circle class="g-well" cx="60" cy="60" r="52"></circle>
+            <circle class="g-track" cx="60" cy="60" r="42"></circle>
+            <g class="g-ticks" id="g-ticks"></g>
+            <g class="g-arm" id="g-arm">
+              <line class="g-spoke" x1="60" y1="60" x2="60" y2="24"></line>
+              <circle class="g-knob-halo" cx="60" cy="18" r="11"></circle>
+              <circle class="g-knob" cx="60" cy="18" r="7"></circle>
+            </g>
+            <circle class="g-hub" cx="60" cy="60" r="4"></circle>
+          </svg>
+          <div class="ctl-steps">
+            <button type="button" class="step prev" id="deck-prev" aria-label="Previous section">
+              <svg viewBox="0 0 22 30" aria-hidden="true"><polygon points="20,2 20,28 2,15"></polygon></svg>
+            </button>
+            <button type="button" class="step next" id="deck-next" aria-label="Next section">
+              <svg viewBox="0 0 22 30" aria-hidden="true"><polygon points="2,2 2,28 20,15"></polygon></svg>
+            </button>
+          </div>
         </div>
-        <button type="button" class="step next" id="deck-next" aria-label="Next section">
-          <svg viewBox="0 0 22 30" aria-hidden="true"><polygon points="2,2 2,28 20,15"></polygon></svg>
-        </button>
-        <button type="button" class="primary go" id="deck-go">Open</button>
+
+        <div class="deck-read">
+          <span id="deck-idx">01 / {{ '%02d' % tiles|length }}</span>
+          <b id="deck-name">&mdash;</b>
+          <button type="button" class="primary go" id="deck-go">Open</button>
+        </div>
       </div>
     </div>
 
@@ -80,6 +126,7 @@
 </div>
 {% endblock %}
 {% block scripts %}
+<script src="/static/app/js/sfx.js"></script>
 <script src="/static/app/js/deck.js"></script>
 <script src="/static/app/js/hub.js"></script>
 {% endblock %}

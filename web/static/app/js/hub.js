@@ -1,23 +1,21 @@
-/* hub.js -- the navigation surface. mk23.
+/* hub.js -- the navigation surface. mk25.
 
    Three sets, one selection.
 
-     rail   TV over console, down the left. Never changes, whatever else does.
-     band   small cards across the top. A card SELECTS; it does not open.
-     stage  the deck, or the section the deck opened.
+     rail   TV, nav, dock -- down the left. Never moves.
+     band   section cards across the top. A card SELECTS; it does not open.
+     stage  the deck and its control box, or the section the deck opened.
 
-   The card is the selector and the deck face is the door -- the same split the
-   personal site uses, and the reason the band can stay put while the stage
-   swaps: you never lose the selector to open something.
-
-   `sel` is the only selection state. The cards, the deck, the readout and the
-   console line all read it.
+   `sel` is the only selection state. Cards, deck, gimbal and readout all read
+   it. Opening a section parks the deck in the rail's dock slot, minimised and
+   drifting -- the site's L4 behaviour -- and clicking it there comes back.
 */
 "use strict";
 (() => {
   const hub = document.getElementById("hub");
   if (!hub) return;
   const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const Sfx = window.Sfx || {snap() {}, deal() {}, dock() {}, on: () => false, set() {}};
 
   const cards = [...document.querySelectorAll(".card")];
   const N = cards.length;
@@ -30,21 +28,27 @@
   }));
 
   let sel = 0, open = false, deck = null;
+  const pad = n => String(n).padStart(2, "0");
 
   const nameOut = document.getElementById("deck-name");
   const idxOut = document.getElementById("deck-idx");
-  const selOut = document.getElementById("hub-sel");
+  const gimbal = document.getElementById("gimbal");
 
   function paint() {
-    cards.forEach((c, i) => c.setAttribute("aria-selected", i === sel ? "true" : "false"));
+    cards.forEach((c, i) => {
+      const on = i === sel;
+      c.setAttribute("aria-selected", on ? "true" : "false");
+      c.tabIndex = on ? 0 : -1;
+    });
     const f = faces[sel];
     if (nameOut) nameOut.textContent = f.name;
-    if (idxOut) idxOut.textContent = `${sel + 1} / ${N}`;
-    if (selOut) selOut.textContent = f.name;
+    if (idxOut) idxOut.textContent = `${pad(sel + 1)} / ${pad(N)}`;
+    if (gimbal) gimbal.setAttribute("aria-valuenow", String(sel + 1));
+    if (gimbal) gimbal.setAttribute("aria-valuetext", f.name);
   }
 
-  /* fromDeck stops the round trip: the deck reports a new front face, we paint,
-     and we must not turn the deck again in response to our own paint. */
+  /* fromDeck stops the round trip: the deck reports a new front face, we
+     paint, and we must not turn the deck again in response to our own paint. */
   function setSel(i, fromDeck) {
     sel = ((i % N) + N) % N;
     paint();
@@ -53,11 +57,15 @@
 
   // ---------------------------------------------------------------- deck --
   const host = document.getElementById("deck");
+  const arm = document.getElementById("g-arm");
   if (host && window.Deck) {
     deck = window.Deck.mount(host, {
       faces,
       onSelect: i => setSel(i, true),
       onOpen: i => { setSel(i, true); openSection(); },
+      onPass: () => { if (!open) Sfx.snap(); },       // one detent per face
+      // the knob sits where the front face is: face i at i*step clockwise
+      onAngle: a => { if (arm) arm.setAttribute("transform", `rotate(${(-a).toFixed(2)} 60 60)`); },
     });
   }
 
@@ -68,25 +76,106 @@
   const go = document.getElementById("deck-go");
   if (go) go.addEventListener("click", openSection);
 
+  // -------------------------------------------------------------- gimbal --
+  /* Grab the knob (or anywhere on the dial) and drag it round. One full turn of
+     the knob is one full turn of the deck, so each section is 360/N degrees of
+     knob travel and the tick marks are the faces. Let go and it snaps. */
+  if (gimbal && deck) {
+    const ticks = document.getElementById("g-ticks");
+    const NS = "http://www.w3.org/2000/svg";
+    for (let i = 0; i < N; i++) {
+      const t = document.createElementNS(NS, "line");
+      t.setAttribute("x1", "60"); t.setAttribute("y1", "11");
+      t.setAttribute("x2", "60"); t.setAttribute("y2", i === 0 ? "3" : "6");
+      t.setAttribute("transform", `rotate(${(i * 360 / N).toFixed(2)} 60 60)`);
+      ticks.appendChild(t);
+    }
+    const bearing = e => {
+      const r = gimbal.getBoundingClientRect();
+      const dx = e.clientX - (r.left + r.width / 2), dy = e.clientY - (r.top + r.height / 2);
+      return Math.atan2(dx, -dy) * 180 / Math.PI;       // clockwise from 12 o'clock
+    };
+    let grabbing = false, last = 0;
+    gimbal.addEventListener("pointerdown", e => {
+      if (open || (e.button != null && e.button !== 0)) return;
+      grabbing = true; last = bearing(e);
+      deck.grab();
+      gimbal.classList.add("held");
+      gimbal.setPointerCapture(e.pointerId);
+      e.preventDefault();
+    });
+    gimbal.addEventListener("pointermove", e => {
+      if (!grabbing) return;
+      const b = bearing(e);
+      let d = b - last;
+      if (d > 180) d -= 360;
+      if (d < -180) d += 360;
+      last = b;
+      deck.turn(-d);                                    // knob clockwise = deck forward
+    });
+    const letGo = e => {
+      if (!grabbing) return;
+      grabbing = false;
+      gimbal.classList.remove("held");
+      if (gimbal.hasPointerCapture && gimbal.hasPointerCapture(e.pointerId)) gimbal.releasePointerCapture(e.pointerId);
+      deck.release();
+    };
+    gimbal.addEventListener("pointerup", letGo);
+    gimbal.addEventListener("pointercancel", letGo);
+    gimbal.addEventListener("keydown", e => {
+      if (e.key === "ArrowRight" || e.key === "ArrowUp") { setSel(sel + 1); e.preventDefault(); }
+      else if (e.key === "ArrowLeft" || e.key === "ArrowDown") { setSel(sel - 1); e.preventDefault(); }
+      else if (e.key === "Home") { setSel(0); e.preventDefault(); }
+      else if (e.key === "End") { setSel(N - 1); e.preventDefault(); }
+      else if (e.key === "Enter") { openSection(); e.preventDefault(); }
+    });
+  }
+
   // --------------------------------------------------------------- cards --
   cards.forEach((c, i) => {
-    c.addEventListener("click", () => setSel(i));       // selector only
+    c.addEventListener("click", () => { if (i !== sel) Sfx.deal(); if (open) closeSection(); setSel(i); });
     c.addEventListener("dblclick", () => { setSel(i); openSection(); });
     c.addEventListener("keydown", e => {
       if (e.key === "Enter" && e.shiftKey) { setSel(i); openSection(); e.preventDefault(); }
-      else if (e.key === "ArrowRight") { cards[(i + 1) % N].focus(); e.preventDefault(); }
-      else if (e.key === "ArrowLeft") { cards[(i - 1 + N) % N].focus(); e.preventDefault(); }
+      else if (e.key === "ArrowRight") { setSel(i + 1); cards[sel].focus(); e.preventDefault(); }
+      else if (e.key === "ArrowLeft") { setSel(i - 1); cards[sel].focus(); e.preventDefault(); }
     });
   });
 
-  // -------------------------------------------------------------- screen --
+  // ---------------------------------------------------------- dock / screen --
   const screen = document.getElementById("screen");
   const back = document.getElementById("screen-back");
   const scrName = document.getElementById("screen-name");
   const scrGlyph = document.getElementById("screen-glyph");
   const scrBlurb = document.getElementById("screen-blurb");
+  const wrap = document.getElementById("deck-wrap");
+  const dock = document.getElementById("dock-slot");
+  const dockEmpty = document.getElementById("dock-empty");
+
+  /* Move the deck element between the stage and the dock, FLIP-style: measure
+     where it is, reparent, measure where it landed, start it at the old box and
+     let it glide to the new one. Reparenting keeps one deck, one state. */
+  function moveDeck(to, before) {
+    if (!host || !to) return;
+    const a = host.getBoundingClientRect();
+    to.insertBefore(host, before || null);
+    if (deck) deck.setMini(to === dock);
+    if (reduce) return;
+    const b = host.getBoundingClientRect();
+    if (!b.width || !b.height) return;
+    const sx = a.width / b.width, sy = a.height / b.height;
+    host.style.transformOrigin = "0 0";
+    host.style.transition = "none";
+    host.style.transform = `translate(${a.left - b.left}px, ${a.top - b.top}px) scale(${sx}, ${sy})`;
+    host.getBoundingClientRect();                        // commit the start frame
+    host.style.transition = "transform .62s cubic-bezier(.36,.05,.16,1)";
+    host.style.transform = "none";
+    const done = () => { host.style.transition = ""; host.style.transform = ""; host.removeEventListener("transitionend", done); };
+    host.addEventListener("transitionend", done);
+  }
 
   function openSection() {
+    if (open) return;
     const f = faces[sel];
     open = true;
     hub.dataset.state = "screen";
@@ -94,21 +183,52 @@
     if (scrName) scrName.textContent = f.name;
     if (scrGlyph) scrGlyph.textContent = f.glyph;
     if (scrBlurb) scrBlurb.textContent = f.blurb;
+    if (dockEmpty) dockEmpty.hidden = true;
+    moveDeck(dock);
+    if (dock) { dock.classList.add("live"); dock.setAttribute("role", "button");
+                dock.tabIndex = 0; dock.setAttribute("aria-label", "Back to deck"); }
+    Sfx.dock();
     document.dispatchEvent(new CustomEvent("hub:open", {detail: {id: f.id, name: f.name}}));
     if (back) back.focus();
   }
   function closeSection() {
+    if (!open) return;
     open = false;
     hub.dataset.state = "deck";
     if (screen) screen.hidden = true;
+    moveDeck(wrap, wrap && wrap.firstChild);
+    if (dock) { dock.classList.remove("live"); dock.removeAttribute("role");
+                dock.removeAttribute("tabindex"); dock.removeAttribute("aria-label"); }
+    if (dockEmpty) dockEmpty.hidden = false;
+    Sfx.dock();
     document.dispatchEvent(new CustomEvent("hub:close"));
-    if (deck) deck.relayout();                          // it was display:none; re-measure
     cards[sel].focus();
   }
   if (back) back.addEventListener("click", closeSection);
+  if (dock) {
+    dock.addEventListener("click", () => { if (open) closeSection(); });
+    dock.addEventListener("keydown", e => {
+      if (open && (e.key === "Enter" || e.key === " ")) { closeSection(); e.preventDefault(); }
+    });
+  }
   document.addEventListener("keydown", e => { if (e.key === "Escape" && open) closeSection(); });
 
   setSel(0, true);
+
+  // --------------------------------------------------------------- sound --
+  /* Same control as nathanherling.com's #sndToggle, but a real mute: off means
+     every cue is silent, not just the hover bed. The setting persists. */
+  const snd = document.getElementById("sndToggle");
+  if (snd) {
+    const show = on => {
+      const label = on ? "Sound on" : "Sound off";
+      snd.setAttribute("aria-pressed", on ? "true" : "false");
+      snd.setAttribute("aria-label", label);
+      snd.title = label;
+    };
+    show(Sfx.on());
+    snd.addEventListener("click", () => { Sfx.set(!Sfx.on()); show(Sfx.on()); if (Sfx.on()) Sfx.deal(); });
+  }
 
   // ------------------------------------------------------------------ TV --
   /* Ten seconds a picture, static break on the change -- the same grain the
@@ -195,17 +315,6 @@
     if (document.hidden) { clearTimeout(timer); if (raf) { cancelAnimationFrame(raf); raf = null; } }
     else { kick(); if (shots.length) timer = setTimeout(() => show(ch + 1), DWELL); }
   });
-
-  // the console mirrors what the title block already tracks
-  const mirror = (from, to) => {
-    const a = document.getElementById(from), b = document.getElementById(to);
-    if (!a || !b) return;
-    const sync = () => { b.textContent = a.textContent; };
-    new MutationObserver(sync).observe(a, {childList: true, characterData: true, subtree: true});
-    sync();
-  };
-  mirror("tb-who", "hub-who");
-  mirror("tb-idle", "hub-idle");
 
   bootTV();
 })();
