@@ -23,8 +23,9 @@
 (() => {
   const KEY = "pfd.sound";
   let actx = null, master = null, noiseBuf = null;
-  let enabled = false;
-  try { enabled = localStorage.getItem(KEY) === "on"; } catch (e) { enabled = false; }
+  // ON unless the user has switched it off (mk25a: default was off)
+  let enabled = true;
+  try { enabled = localStorage.getItem(KEY) !== "off"; } catch (e) { enabled = true; }
 
   function unlock() {
     if (actx) { if (actx.state === "suspended") actx.resume(); return; }
@@ -98,7 +99,8 @@
     document.dispatchEvent(new CustomEvent("sfx:change", {detail: {on: enabled}}));
   }
 
-  // stored ON: arm on the first gesture anywhere
+  /* ON: arm on the first gesture anywhere. Browsers refuse audio before one, so
+     "on at load" means the first click or key already has sound behind it. */
   if (enabled) {
     const arm = () => { unlock(); window.removeEventListener("pointerdown", arm, true);
                         window.removeEventListener("keydown", arm, true); };

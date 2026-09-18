@@ -73,17 +73,22 @@
 
     let R = 0, pw = 200, mini = false;
     function layout() {
-      const r = host.getBoundingClientRect();
-      const w = r.width || 600, h = r.height || 300;
+      /* clientWidth/Height, NOT getBoundingClientRect: the host carries a FLIP
+         transform while it glides between stage and dock, and the bounding rect
+         includes that scale. mk25 measured mid-glide on the way back, solved the
+         card size from the shrunken box, and the deck came home small. */
+      const w = host.clientWidth || 600, h = host.clientHeight || 300;
       /* Solve the card width from the box, like the site's sizeCards(): the
          deck's visible extent is about 3.3 card widths at N=7, and the card
          must fit the height with room for the rake. */
       pw = mini ? Math.max(56, Math.min(w * 0.30, (h * 0.62) / ASPECT, 120))
-                : Math.max(120, Math.min(w * 0.27, (h * 0.62) / ASPECT, 330));
+                : Math.max(110, Math.min(w * 0.40, (h * 0.66) / ASPECT, 420));
       R = Math.max(FLOOR * pw, (pw * GAP) / (2 * Math.tan(Math.PI / N)));
       stage.style.setProperty("--pw", pw.toFixed(1) + "px");
       stage.style.setProperty("--ph", (pw * ASPECT).toFixed(1) + "px");
       stage.style.perspective = Math.round(R * 3.4) + "px";
+      // under ~190 px a placard can't hold name + blurb; drop the blurb
+      stage.classList.toggle("compact", !mini && pw < 190);
       cards.forEach((c, i) => {
         c.style.transform = `rotateY(${(i * step).toFixed(2)}deg) translateZ(${R.toFixed(1)}px) rotateX(${-TILT}deg)`;
       });

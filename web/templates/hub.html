@@ -8,7 +8,18 @@
     <section class="rail-tv panel" aria-label="Display">
       <div class="tv">
         <div class="tv-screen">
-          <img id="tv-img" alt="" aria-hidden="true">
+          <!-- the picture as three channel layers, recombined by screen blending.
+               Offsetting R and B gives the fringe; the shear slides them apart. -->
+          <div class="tv-pic" id="tv-pic" aria-hidden="true">
+            <img class="tv-l tv-g" id="tv-img" alt="">
+            <img class="tv-l tv-r" alt="">
+            <img class="tv-l tv-b" alt="">
+          </div>
+          <svg class="tv-defs" width="0" height="0" aria-hidden="true" focusable="false">
+            <filter id="tvR" color-interpolation-filters="sRGB"><feColorMatrix type="matrix" values="1 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 1 0"/></filter>
+            <filter id="tvG" color-interpolation-filters="sRGB"><feColorMatrix type="matrix" values="0 0 0 0 0  0 1 0 0 0  0 0 0 0 0  0 0 0 1 0"/></filter>
+            <filter id="tvB" color-interpolation-filters="sRGB"><feColorMatrix type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 1 0 0  0 0 0 1 0"/></filter>
+          </svg>
           <canvas id="tv-fx" aria-hidden="true"></canvas>
           <div class="tv-glass" aria-hidden="true"></div>
           <div class="tv-osd"><span id="tv-ch">CH --</span><span id="tv-name">no signal</span></div>
@@ -97,12 +108,12 @@
               <svg viewBox="0 0 22 30" aria-hidden="true"><polygon points="2,2 2,28 20,15"></polygon></svg>
             </button>
           </div>
+          <button type="button" class="primary go" id="deck-go">Open</button>
         </div>
 
         <div class="deck-read">
           <span id="deck-idx">01 / {{ '%02d' % tiles|length }}</span>
           <b id="deck-name">&mdash;</b>
-          <button type="button" class="primary go" id="deck-go">Open</button>
         </div>
       </div>
     </div>

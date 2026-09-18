@@ -41,7 +41,11 @@
       c.tabIndex = on ? 0 : -1;
     });
     const f = faces[sel];
-    if (nameOut) nameOut.textContent = f.name;
+    if (nameOut && nameOut.textContent !== f.name) {
+      nameOut.textContent = f.name;
+      // replay the underline's draw-in: drop the animation for a frame
+      nameOut.classList.add("redraw"); void nameOut.offsetWidth; nameOut.classList.remove("redraw");
+    }
     if (idxOut) idxOut.textContent = `${pad(sel + 1)} / ${pad(N)}`;
     if (gimbal) gimbal.setAttribute("aria-valuenow", String(sel + 1));
     if (gimbal) gimbal.setAttribute("aria-valuetext", f.name);
@@ -68,6 +72,19 @@
       onAngle: a => { if (arm) arm.setAttribute("transform", `rotate(${(-a).toFixed(2)} 60 60)`); },
     });
   }
+
+  /* click feedback on the control box: re-add .hit so the ring replays on
+     every press, drop it when the ring is done */
+  function hit(el, ms) {
+    if (!el) return;
+    el.classList.remove("hit"); void el.getBoundingClientRect(); el.classList.add("hit");
+    clearTimeout(el._hitT); el._hitT = setTimeout(() => el.classList.remove("hit"), ms || 420);
+  }
+  ["deck-prev", "deck-next", "deck-go"].forEach(id => {
+    const b = document.getElementById(id);
+    if (b) b.addEventListener("pointerdown", () => hit(b));
+  });
+  if (gimbal) gimbal.addEventListener("pointerdown", () => hit(gimbal, 260));
 
   const prev = document.getElementById("deck-prev");
   const next = document.getElementById("deck-next");
@@ -234,6 +251,17 @@
   /* Ten seconds a picture, static break on the change -- the same grain the
      sign-in button uses. Nothing to show: it just stays on. */
   const img = document.getElementById("tv-img");
+  const pic = document.getElementById("tv-pic");
+  const layers = [...document.querySelectorAll(".tv-l")];
+  const tvScreen = document.querySelector(".tv-screen");
+  /* RGB shear: a 260 ms tear every 3-8 s, plus one on every channel change.
+     Restarting the class needs a reflow in between or the animation won't rerun. */
+  function shear() {
+    if (reduce || !tvScreen || document.hidden) return;
+    tvScreen.classList.remove("shear"); void tvScreen.offsetWidth; tvScreen.classList.add("shear");
+    setTimeout(() => tvScreen.classList.remove("shear"), 280);
+  }
+  (function shearLoop() { setTimeout(() => { shear(); shearLoop(); }, 3000 + Math.random() * 5000); })();
   const fx = document.getElementById("tv-fx");
   const chOut = document.getElementById("tv-ch");
   const tvName = document.getElementById("tv-name");
@@ -280,9 +308,11 @@
     ch = ((i % shots.length) + shots.length) % shots.length;
     const src = shots[ch];
     noise = 1; kick();
-    if (img) img.classList.remove("on");
+    if (pic) pic.classList.remove("on");
     setTimeout(() => {
-      if (img) { img.src = src; img.classList.add("on"); }
+      layers.forEach(l => { l.src = src; });
+      if (pic) pic.classList.add("on");
+      shear();
       if (chOut) chOut.textContent = "CH " + String(ch + 1).padStart(2, "0");
       if (tvName) tvName.textContent = src.split("/").pop();
       const t0 = performance.now();

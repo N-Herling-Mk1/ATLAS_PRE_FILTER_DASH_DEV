@@ -23,24 +23,66 @@ body[data-page="hub"] .frame { grid-template-columns: minmax(0, 1fr); }
    goes, and the hub can run to the bottom of the sheet */
 body[data-page="hub"] .sheet { padding-bottom: 28px; }
 
-.hub { display: grid; gap: 16px;
-  grid-template-columns: minmax(250px, 21vw) minmax(0, 1fr);
+/* mk25b: the hub is exactly one screen tall. 76 px = the sheet's 10+10 margin,
+   1+1 border, 26+28 padding. Every row inside is minmax(0, ...) so nothing can
+   push the page past the fold; below 560 px of height it scrolls rather than
+   crushing the deck. */
+.hub { display: grid; gap: 14px;
+  grid-template-columns: minmax(240px, 19vw) minmax(0, 1fr);
   grid-template-rows: auto minmax(0, 1fr);
   grid-template-areas: "rail band" "rail stage";
-  min-height: calc(100vh - 20px - 54px - 2px); }
-.rail { grid-area: rail; display: grid; gap: 16px;
-  grid-template-rows: auto auto minmax(170px, 1fr); }
+  height: calc(100vh - 76px); height: calc(100dvh - 76px); min-height: 560px; }
+.rail { grid-area: rail; display: grid; gap: 14px; min-height: 0;
+  grid-template-rows: auto auto minmax(120px, 1fr); }
 .band { grid-area: band; }
-.stage { grid-area: stage; min-height: clamp(420px, 56vh, 700px); display: grid; }
+.stage { grid-area: stage; min-height: 0; display: grid; }
+
+/* rounded panels (mk25b) -- the outer panels at 14 px, what sits inside them
+   one step smaller so the corners nest */
+.hub section.panel { border-radius: 14px; margin: 0; }
+/* the sheet's 10 px top margin collapsed through <body> and pushed the whole
+   document 10 px past the viewport; a flow-root body keeps it inside */
+body[data-page="hub"] { display: flow-root; }
 
 /* --------------------------------------------------------------- the TV -- */
-.tv-screen { position: relative; aspect-ratio: 4 / 3; overflow: hidden;
+.tv-screen { position: relative; aspect-ratio: 4 / 3; overflow: hidden; border-radius: 8px 8px 0 0;
   background: radial-gradient(120% 130% at 50% 45%, #0A1622 0%, #02060B 72%, #000 100%);
   border: 1px solid var(--rule-hi); border-bottom: 0;
   box-shadow: inset 0 0 40px -10px rgba(63, 195, 255, .30); }
-.tv-screen img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
+/* contain, not cover (mk25d): cover cropped the image to fill 4:3 and cut off
+   the outer rings of anything square or wide. Letterbox is the tube's black. */
+.tv-pic { position: absolute; inset: 0; isolation: isolate; background: #000;
   opacity: 0; transition: opacity .28s linear; }
-.tv-screen img.on { opacity: .92; }
+.tv-pic.on { opacity: .94; }
+.tv-l { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+.tv-g { filter: url(#tvG); }
+.tv-r { filter: url(#tvR); mix-blend-mode: screen; transform: translateX(1.3px); }
+.tv-b { filter: url(#tvB); mix-blend-mode: screen; transform: translateX(-1.3px); }
+.tv-defs { position: absolute; width: 0; height: 0; }
+/* the RGB shear: a short burst where the red and blue fields tear sideways
+   against the green, like a tube losing sync. hub.js adds .shear at random
+   intervals and on every channel change. */
+.tv-screen.shear .tv-r { animation: shear-r .26s steps(1, end) both; }
+.tv-screen.shear .tv-b { animation: shear-b .26s steps(1, end) both; }
+.tv-screen.shear .tv-g { animation: shear-g .26s steps(1, end) both; }
+/* whole fields slide -- no clip bands: clipping R and B left only green in the
+   gaps and the picture flashed green instead of tearing */
+@keyframes shear-r {
+  0%   { transform: translateX(7px) skewX(-3deg); }
+  25%  { transform: translateX(-3px); }
+  50%  { transform: translateX(10px) skewX(2deg); }
+  75%  { transform: translateX(4px); }
+  100% { transform: translateX(1.3px); } }
+@keyframes shear-b {
+  0%   { transform: translateX(-8px) skewX(3deg); }
+  25%  { transform: translateX(4px); }
+  50%  { transform: translateX(-11px) skewX(-2deg); }
+  75%  { transform: translateX(-4px); }
+  100% { transform: translateX(-1.3px); } }
+@keyframes shear-g {
+  0%, 50% { transform: skewX(-2deg) translateX(2px); }
+  25%     { transform: skewX(1.5deg) translateX(-2px); }
+  75%, 100% { transform: none; } }
 .tv-screen canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
 .tv-glass { position: absolute; inset: 0; pointer-events: none;
   background:
@@ -52,7 +94,7 @@ body[data-page="hub"] .sheet { padding-bottom: 28px; }
   text-shadow: 0 0 8px rgba(67, 224, 140, .7); pointer-events: none; }
 .tv-osd span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tv-bezel { display: flex; align-items: center; gap: 9px; padding: 7px 10px;
-  border: 1px solid var(--rule-hi); background: var(--steel-2);
+  border: 1px solid var(--rule-hi); background: var(--steel-2); border-radius: 0 0 8px 8px;
   font-family: var(--mono); font-size: 10px; letter-spacing: .14em;
   text-transform: uppercase; color: var(--meta); }
 .tv-lamp { width: 7px; height: 7px; border-radius: 50%; background: var(--win);
@@ -65,19 +107,19 @@ body[data-page="hub"] .sheet { padding-bottom: 28px; }
   border-bottom: 1px solid var(--rule); padding-bottom: 8px; }
 .rn-head h2 { margin: 0; }
 .rn-links { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 5px; }
-.rn-links a { display: block; padding: 8px 11px; border: 1px solid var(--rule);
+.rn-links a { display: block; padding: 7px 11px; border: 1px solid var(--rule); border-radius: 7px;
   background: var(--steel-2); color: var(--ink); text-decoration: none;
   font-family: var(--display); font-weight: 600; font-size: 12px; letter-spacing: .06em;
   transition: border-color .14s ease, color .14s ease, background .14s ease; }
 .rn-links a:hover { border-color: var(--cyan); color: #fff; background: #0C1E30; }
 .rn-out { margin: 10px 0 0; }
-.rn-out button { width: 100%; font-family: var(--display); font-size: 11px; letter-spacing: .1em; }
+.rn-out button { width: 100%; border-radius: 7px; font-family: var(--display); font-size: 11px; letter-spacing: .1em; }
 
 /* sound toggle -- from nathan_herling css/splash.css #sndToggle, resized for
    the nav header and moved onto the dashboard's cyan. Same states: off shows
    the slash and breathes, on lights the waves. */
 #sndToggle { margin-left: auto; width: 38px; height: 38px; padding: 0;
-  background: rgba(0, 26, 36, .6); border: 1px solid rgba(63, 195, 255, .30); border-radius: 3px;
+  background: rgba(0, 26, 36, .6); border: 1px solid rgba(63, 195, 255, .30); border-radius: 7px;
   color: var(--cyan); cursor: pointer; display: flex; align-items: center; justify-content: center;
   transition: border-color .2s ease, box-shadow .2s ease; }
 #sndToggle svg { width: 23px; height: 23px; overflow: visible; }
@@ -100,8 +142,8 @@ body[data-page="hub"] .sheet { padding-bottom: 28px; }
 
 /* ------------------------------------------------------------ the dock -- */
 .rail-dock { display: grid; padding: 10px; }
-.dock-slot { position: relative; min-height: 150px; display: grid; place-items: center;
-  border: 1px dashed var(--rule-hi); background:
+.dock-slot { position: relative; min-height: 0; display: grid; place-items: center;
+  border: 1px dashed var(--rule-hi); border-radius: 9px; background:
     radial-gradient(120% 90% at 50% 60%, rgba(30, 136, 216, .08), transparent 70%); }
 .dock-empty { margin: 0; padding: 14px; text-align: center; max-width: 24ch; }
 .dock-slot.live { border-style: solid; border-color: var(--rule-hi); cursor: pointer; }
@@ -114,16 +156,16 @@ body[data-page="hub"] .sheet { padding-bottom: 28px; }
 .band-head { display: flex; align-items: baseline; gap: 14px; }
 .band-head h2 { margin: 0; }
 #band-hint { margin-left: auto; }
-.cards { display: grid; gap: 10px; margin-top: 13px;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+.cards { display: grid; gap: 10px; margin-top: 12px; padding-bottom: 6px;
+  grid-template-columns: repeat(auto-fit, minmax(118px, 1fr)); }
 .card { position: relative; display: grid; align-content: space-between; gap: 10px;
-  min-height: 74px; padding: 12px 15px 13px; text-align: left;
+  min-height: 70px; padding: 11px 15px 12px; text-align: left; border-radius: 9px;
   background: linear-gradient(180deg, #0B1B2C, #07121E); border: 1px solid var(--rule-hi);
   color: var(--ink); cursor: pointer; isolation: isolate;
   transition: border-color .16s ease, background .16s ease, box-shadow .16s ease, transform .16s ease; }
 .card-glyph { font-family: var(--mono); font-size: 11px; letter-spacing: .14em;
   color: var(--accent); text-transform: uppercase; }
-.card-name { font-family: var(--display); font-weight: 800; font-size: clamp(14px, 1.08vw, 17px);
+.card-name { font-family: var(--display); font-weight: 800; font-size: clamp(13px, 1.02vw, 17px);
   letter-spacing: .04em; line-height: 1.15; color: #fff; }
 .card:hover { border-color: var(--cyan); background: linear-gradient(180deg, #0E2438, #081725); }
 .card:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
@@ -135,14 +177,21 @@ body[data-page="hub"] .sheet { padding-bottom: 28px; }
    which still reads as light catching the edge. */
 @property --glare { syntax: "<angle>"; inherits: false; initial-value: 300deg; }
 .card[aria-selected="true"] { border-color: var(--cyan); transform: translateY(-1px);
-  background: linear-gradient(180deg, #0F2A40 0%, #0A1D2E 55%, #071421 100%);
+  background: linear-gradient(180deg, rgba(255, 255, 255, .10), transparent 38%),
+              linear-gradient(180deg, #0F2A40 0%, #0A1D2E 55%, #071421 100%);
   box-shadow: 0 0 0 1px rgba(63, 195, 255, .55), 0 0 22px -2px rgba(63, 195, 255, .50),
               inset 0 1px 0 rgba(255, 255, 255, .22), inset 0 0 26px -8px rgba(63, 195, 255, .45); }
 .card[aria-selected="true"] .card-glyph { color: #FFC06A; }
-.card[aria-selected="true"]::before { content: ""; position: absolute; inset: -1px; z-index: -1;
-  pointer-events: none;
-  background: linear-gradient(180deg, rgba(255, 255, 255, .10), transparent 38%); }
+/* the red underline under the selection (mk25b): a lit bar just below the card,
+   brightest in the middle, with its own bloom so it reads on the dark band */
+.card[aria-selected="true"]::before, .placard.face::before { content: ""; position: absolute;
+  left: 12%; right: 12%; bottom: -7px; height: 2px; border-radius: 2px; pointer-events: none;
+  background: linear-gradient(90deg, transparent, #FF3A48 18%, #FF6A74 50%, #FF3A48 82%, transparent);
+  box-shadow: 0 0 8px 1px rgba(255, 45, 60, .85), 0 0 20px 2px rgba(255, 45, 60, .45);
+  animation: underline-in .32s ease-out both; }
+@keyframes underline-in { from { opacity: 0; transform: scaleX(.3); } to { opacity: 1; transform: none; } }
 .card[aria-selected="true"]::after { content: ""; position: absolute; inset: -2px; padding: 2px;
+  border-radius: 10px;
   pointer-events: none;
   background: conic-gradient(from var(--glare), transparent 0deg 300deg,
     rgba(160, 230, 255, .0) 312deg, rgba(210, 245, 255, .95) 334deg, #fff 340deg,
@@ -156,8 +205,12 @@ body[data-page="hub"] .sheet { padding-bottom: 28px; }
 @keyframes glare { to { --glare: 660deg; } }
 
 /* ------------------------------------------------------------- the deck -- */
-.deck-wrap { display: grid; grid-template-rows: minmax(0, 1fr) auto; gap: 12px; min-height: 0; }
-.deck-host { position: relative; min-height: clamp(320px, 46vh, 600px); }
+/* mk25b: one row, controls left and deck right (your mockup). The DOM order is
+   deck then console -- hub.js reparents the deck back to first child when it
+   leaves the dock -- so placement is by grid area, not source order. */
+.deck-wrap { display: grid; min-height: 0; gap: 8px; align-items: center;
+  grid-template-columns: auto minmax(0, 1fr); grid-template-areas: "console deck"; }
+.deck-host { grid-area: deck; position: relative; height: 100%; min-height: 260px; }
 .deck-stage { position: absolute; inset: 0; display: grid; place-items: center;
   perspective-origin: 50% 38%; touch-action: pan-y; cursor: grab; user-select: none; }
 .deck-stage:focus-visible { outline: 1px dashed var(--rule-hi); outline-offset: -6px; }
@@ -173,7 +226,7 @@ body[data-page="hub"] .sheet { padding-bottom: 28px; }
   display: flex; flex-direction: column; justify-content: flex-end; gap: calc(var(--pw, 200px) * .014);
   padding: calc(var(--pw, 200px) * .07); text-align: left; color: var(--ink);
   background: linear-gradient(180deg, rgba(10, 24, 39, .90), rgba(4, 10, 17, .94));
-  border: 1px solid var(--glass); border-radius: 0;
+  border: 1px solid var(--glass); border-radius: 8px;
   box-shadow: 0 0 18px rgba(63, 195, 255, .12), inset 0 0 26px rgba(0, 0, 0, .62);
   /* all placards stay visible -- backface culling kills the sides at +/-90deg.
      Only the face flush to camera takes the pointer; drag is on the stage. */
@@ -181,7 +234,9 @@ body[data-page="hub"] .sheet { padding-bottom: 28px; }
   clip-path: inset(0 0 100% 0);
   transition: border-color .25s ease, box-shadow .25s ease; }
 /* the deal-in: each placard prints top to bottom as it lands */
-.placard.dealt { clip-path: none; animation: print .46s cubic-bezier(.22, .61, .36, 1) both; }
+/* fill-mode BACKWARDS, not both: holding the last frame kept clip-path: inset(0)
+   on for good, which clipped the front face's glow (and the underline) to its box */
+.placard.dealt { clip-path: none; animation: print .46s cubic-bezier(.22, .61, .36, 1) backwards; }
 @keyframes print { from { clip-path: inset(0 0 100% 0); } to { clip-path: inset(0 0 0 0); } }
 .pc-top { display: flex; justify-content: space-between; gap: 8px; margin-bottom: auto;
   font-family: var(--mono); font-size: max(9px, calc(var(--pw, 200px) * .05)); letter-spacing: .22em; }
@@ -194,23 +249,30 @@ body[data-page="hub"] .sheet { padding-bottom: 28px; }
 .pc-o { font-family: var(--mono); font-size: max(9px, calc(var(--pw, 200px) * .046));
   letter-spacing: .2em; text-transform: uppercase; color: var(--cyan); opacity: 0;
   transition: opacity .2s ease; }
+.placard.face::before { bottom: -12px; }
+.deck-stage.mini .placard.face::before { display: none; }
 .placard.face { border-color: var(--cyan); pointer-events: auto; cursor: pointer;
   box-shadow: 0 0 30px rgba(63, 195, 255, .32), inset 0 0 26px rgba(0, 0, 0, .62); }
 .placard.face .pc-o { opacity: 1; }
 .placard.face:hover { box-shadow: 0 0 42px rgba(63, 195, 255, .46), inset 0 0 26px rgba(0, 0, 0, .62); }
 .placard:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.deck-stage.compact .pc-b { display: none; }
 .deck-stage.mini .placard { pointer-events: none; }
 .deck-stage.mini .pc-b, .deck-stage.mini .pc-o, .deck-stage.mini .pc-g { display: none; }
 .deck-stage.mini .pc-l { font-size: calc(var(--pw, 90px) * .1); }
 
 /* -------------------------------------------------------- control box -- */
-.deck-console { display: flex; align-items: center; justify-content: center; gap: 30px;
-  border-top: 1px solid var(--rule); padding-top: 14px; }
-.ctl-box { display: grid; justify-items: center; gap: 8px; padding: 12px 22px 14px;
+/* mk25e: one narrow column -- control box on top, readout under it (your
+   mockup). The column is only as wide as the box, so the deck gets the width
+   back and centres closer in. */
+.deck-console { grid-area: console; display: flex; flex-direction: column; align-items: stretch;
+  gap: 34px; padding: 2px 4px 0 2px; align-self: start; }
+.ctl-box { display: grid; justify-items: center; gap: 14px; padding: 20px 26px 22px;
   border: 1px solid var(--rule-hi); border-radius: 18px;
   background: linear-gradient(180deg, #0B1A2A, #060F19);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, .06), 0 10px 30px -18px #000; }
-.gimbal { width: 112px; height: 112px; overflow: visible; cursor: grab; touch-action: none; }
+.gimbal { width: clamp(130px, 11vw, 176px); height: clamp(130px, 11vw, 176px);
+  overflow: visible; cursor: grab; touch-action: none; }
 .gimbal.held { cursor: grabbing; }
 .gimbal:focus-visible { outline: none; }
 .gimbal:focus-visible .g-track { stroke: var(--accent); }
@@ -225,20 +287,45 @@ body[data-page="hub"] .sheet { padding-bottom: 28px; }
 .gimbal:hover .g-knob-halo, .gimbal.held .g-knob-halo { fill: rgba(63, 195, 255, .32); }
 .gimbal.held .g-knob { fill: #BDEFFF; }
 .ctl-steps { display: flex; gap: 12px; }
-.step { background: var(--steel-2); border: 1px solid var(--rule-hi); padding: 7px 13px;
-  cursor: pointer; line-height: 0; border-radius: 6px; }
-.step svg { width: 17px; height: 23px; }
+.step { background: var(--steel-2); border: 1px solid var(--rule-hi); padding: 9px 17px;
+  cursor: pointer; line-height: 0; border-radius: 7px; }
+.step svg { width: 20px; height: 27px; }
+.ctl-steps { gap: 16px; }
 .step polygon { fill: none; stroke: var(--ink-2); stroke-width: 2; stroke-linejoin: round; }
+.step, .ctl-box .go { position: relative; transition: transform .09s ease, border-color .14s ease,
+  background .14s ease, box-shadow .14s ease; }
+.step:active, .ctl-box .go:active { transform: scale(.93); }
+/* hit: a flash inside and a ring that blows outward, re-triggered per press */
+.step.hit { background: #10304A; border-color: #9BE6FF; box-shadow: inset 0 0 14px rgba(63, 195, 255, .55); }
+.step.hit polygon { stroke: #E6FAFF; fill: rgba(63, 195, 255, .35); }
+.step.hit::after, .ctl-box .go.hit::after { content: ""; position: absolute; inset: -2px; border-radius: inherit;
+  pointer-events: none; animation: hit-ring .42s ease-out both; }
+.step.hit::after { box-shadow: 0 0 0 2px rgba(63, 195, 255, .85); }
+.ctl-box .go.hit::after { box-shadow: 0 0 0 2px rgba(255, 170, 60, .9); }
+@keyframes hit-ring { from { opacity: 1; transform: scale(1); } to { opacity: 0; transform: scale(1.35); } }
+.gimbal.hit .g-knob-halo { fill: rgba(63, 195, 255, .55); }
+.gimbal.hit .g-track { stroke: var(--cyan); }
 .step:hover { border-color: var(--cyan); }
 .step:hover polygon { stroke: var(--cyan); }
 .step:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
-.deck-read { display: grid; justify-items: start; gap: 6px; min-width: clamp(170px, 17vw, 260px); }
+.deck-read { display: grid; justify-items: start; gap: 8px; padding-left: 24px;
+  width: 0; min-width: 100%; }
 .deck-read span { font-family: var(--mono); font-size: 11px; letter-spacing: .2em; color: var(--meta); }
-.deck-read b { font-family: var(--display); font-size: clamp(17px, 1.6vw, 23px); font-weight: 800;
-  letter-spacing: .04em; color: #fff; }
-.deck-read .go { margin-top: 4px; padding: 9px 26px; font-family: var(--display); font-weight: 800;
-  letter-spacing: .18em; font-size: 13px; }
+.deck-read b { position: relative; font-family: var(--display); font-size: clamp(19px, 1.8vw, 27px);
+  font-weight: 800; letter-spacing: .04em; color: #fff; padding-bottom: 10px; }
+/* the same red underline the selected card and front placard carry, under the
+   name. It re-runs its draw-in each time the name changes (hub.js re-triggers). */
+.deck-read b::after { content: ""; position: absolute; left: 0; bottom: 0; width: 72%; height: 2px;
+  border-radius: 2px; pointer-events: none;
+  background: linear-gradient(90deg, #FF3A48, #FF6A74 45%, rgba(255, 58, 72, .0));
+  box-shadow: 0 0 8px 1px rgba(255, 45, 60, .8), 0 0 18px 2px rgba(255, 45, 60, .4);
+  transform-origin: left; animation: name-line .34s ease-out both; }
+.deck-read b.redraw::after { animation: none; }
+@keyframes name-line { from { opacity: 0; transform: scaleX(.2); } to { opacity: 1; transform: none; } }
+/* Open lives in the control box now, under the dial and steps */
+.ctl-box .go { width: 100%; padding: 10px 0; font-family: var(--display); font-weight: 800;
+  letter-spacing: .2em; font-size: 14px; border-radius: 8px; }
 
 /* ----------------------------------------------------------- the screen -- */
 /* Visibility is driven by data-state alone -- see the mk24 note: an author
@@ -258,9 +345,30 @@ body[data-page="hub"] .sheet { padding-bottom: 28px; }
   padding: 6px 9px; white-space: nowrap; }
 .screen-body { overflow: auto; min-height: 0; }
 
+/* short screens: tighten the rail so TV + nav + dock fit the height */
+@media (max-height: 860px) {
+  .rail-tv .tv-screen { aspect-ratio: 16 / 10; }
+  .rn-links { gap: 4px; margin-top: 8px; }
+  .rn-links a { padding: 5px 10px; font-size: 11px; }
+  .rn-out { margin-top: 8px; }
+  .hub section.panel { padding-top: 11px; padding-bottom: 11px; }
+}
+@media (max-height: 740px) {
+  .rail-tv .tv-screen { aspect-ratio: 2 / 1; }
+  .rn-links a { padding: 4px 10px; }
+}
+@media (max-width: 1320px) {
+  .deck-wrap { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr);
+               grid-template-areas: "console" "deck"; }
+  /* stacked above the deck, the column would eat the height: lay it back out
+     as a row, box beside readout */
+  .deck-console { flex-direction: row; align-items: center; justify-content: center; align-self: center; }
+  .deck-read { width: clamp(190px, 26vw, 280px); min-width: 0; }
+}
 @media (max-width: 1100px) {
   .hub { grid-template-columns: minmax(0, 1fr); grid-template-areas: "band" "stage" "rail";
-         min-height: 0; }
+         height: auto; min-height: 0; }
+  .stage { min-height: 560px; }
   .rail { grid-template-rows: auto; grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
 @media (max-width: 760px) {
@@ -270,6 +378,8 @@ body[data-page="hub"] .sheet { padding-bottom: 28px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .tv-lamp, #sndToggle[aria-pressed="false"], .card[aria-selected="true"]::after { animation: none; }
-  .placard.dealt { animation: none; }
+  .placard.dealt, .card[aria-selected="true"]::before, .placard.face::before,
+  .deck-read b::after, .step.hit::after, .ctl-box .go.hit::after,
+  .tv-screen.shear .tv-l { animation: none; }
   .tv-screen img, .placard, .card { transition: none; }
 }
