@@ -29,20 +29,41 @@
   <main class="gate-main">
     <form class="gate-plate{% if wrong %} denied{% endif %}" method="post" action="/login">
       <div class="plate-head">
-        <span class="plate-name">Welcome to the Gate</span>
-        <span class="ph-bar" aria-hidden="true">|</span>
-        <span class="ph-state" id="gate-state">
-          <span class="ph-key">STATE</span>
-          <span class="ph-dash" aria-hidden="true">&ndash;</span>
-          <em class="st-lock">LOCKED</em><span class="ph-pipe" aria-hidden="true">|</span><em class="st-open">UNLOCKED</em>
-          <span class="ph-dash" aria-hidden="true">&ndash;</span>
-        </span>
-        <svg class="lock" viewBox="0 0 30 34" aria-hidden="true">
-          <path class="shackle" d="M8.5 14 V10.5 a6.5 6.5 0 0 1 13 0 V14"></path>
-          <rect class="body glow" x="4" y="14" width="22" height="17" rx="2"></rect>
-          <circle class="key" cx="15" cy="21" r="2.1"></circle>
-          <rect class="key" x="14.1" y="21.6" width="1.8" height="5.2" rx=".9"></rect>
-        </svg>
+        <div class="ph-text">
+          <span class="plate-name">Welcome to the Gate</span>
+          <span class="ph-state" id="gate-state">
+            <span class="ph-key">STATE</span>
+            <span class="ph-dash" aria-hidden="true">&ndash;</span>
+            <em class="st-lock">LOCKED</em><span class="ph-pipe" aria-hidden="true">|</span><em class="st-open">UNLOCKED</em>
+          </span>
+        </div>
+
+        <!-- three-state diagram: LOCKED -> CHECK -> VERDICT. The lit node and
+             every colour on this plate come from one --st token. -->
+        <div class="ph-rig">
+          <svg class="diag" viewBox="0 0 158 46" role="img" aria-label="Gate state">
+            <line class="wire w1" x1="26" y1="15" x2="53" y2="15"></line>
+            <line class="wire w2" x1="79" y1="15" x2="106" y2="15"></line>
+            <g class="node n1">
+              <circle cx="16" cy="15" r="9"></circle><circle class="pip" cx="16" cy="15" r="3.4"></circle>
+            </g>
+            <g class="node n2">
+              <circle cx="66" cy="15" r="9"></circle><circle class="pip" cx="66" cy="15" r="3.4"></circle>
+            </g>
+            <g class="node n3">
+              <circle cx="116" cy="15" r="9"></circle><circle class="pip" cx="116" cy="15" r="3.4"></circle>
+            </g>
+            <text class="lab l1" x="16" y="38">LOCKED</text>
+            <text class="lab l2" x="66" y="38">CHECK</text>
+            <text class="lab l3" x="116" y="38">VERDICT</text>
+          </svg>
+          <svg class="lock" viewBox="0 0 30 34" aria-hidden="true">
+            <path class="shackle" d="M8.5 14 V10.5 a6.5 6.5 0 0 1 13 0 V14"></path>
+            <rect class="body glow" x="4" y="14" width="22" height="17" rx="2"></rect>
+            <circle class="key" cx="15" cy="21" r="2.1"></circle>
+            <rect class="key" x="14.1" y="21.6" width="1.8" height="5.2" rx=".9"></rect>
+          </svg>
+        </div>
       </div>
       <div class="plate-body">
         <div class="crt tone-{{ 'bad' if wrong else 'idle' }}" id="crt"

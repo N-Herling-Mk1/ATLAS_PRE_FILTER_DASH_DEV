@@ -32,6 +32,24 @@
 "use strict";
 (() => {
   const GAP = 1.16, FLOOR = 0.82, TILT = -12, ASPECT = 0.72;
+  /* How much of the host's width the ring may span, and the smallest card still
+     worth reading. Past ~16 sections pw pins to PW_MIN and the ring starts
+     growing again -- that is the signal to group the sections, not to lower
+     PW_MIN. See DROP_NOTES_mk27. */
+  const RING_FIT = 0.92, PW_MIN = 120;
+  /* Depth by size as well as by opacity: the face square to camera is drawn a
+     little over full size, the rest shrink toward SIDE_S.
+
+     The exponent is the whole decision. At 0.85 the first neighbour sits at
+     0.93 -- a 7% difference nobody reads as depth. At 0.45 it is 0.84 against
+     the front's 1.06, which is a fifth smaller and plainly a step back. The
+     rear face lands at SIDE_S either way; what changes is how quickly the drop
+     happens over the first few degrees, which is the only part on screen.
+
+     Note it does NOT relieve crowding at high N, which was my first guess: the
+     neighbour's angular distance SHRINKS as sections are added, so it scales
+     back up toward the front size. Spacing is mk27's ring bound's job. */
+  const FRONT_S = 1.06, SIDE_S = 0.68, DEPTH_EXP = 0.45;
   // coast distance = MAX_VEL / (1 - FRICTION) = 70deg: a flick carries about
   // one and a half faces, not most of a turn
   const FRICTION = 0.90, MAX_VEL = 7, SNAP = 0.16, DRIFT = 0.12;
@@ -83,6 +101,17 @@
          must fit the height with room for the rake. */
       pw = mini ? Math.max(56, Math.min(w * 0.30, (h * 0.62) / ASPECT, 120))
                 : Math.max(110, Math.min(w * 0.40, (h * 0.66) / ASPECT, 420));
+      /* Bound the RING, not just the card. R = pw*GAP / (2*tan(pi/N)) grows
+         roughly linearly in N while the box does not: at a 900x300 host the
+         ring clears the box at N=10 and is 2000 px wide by N=20, so the deck
+         would simply hang off both sides as sections are added. Inverting the
+         same formula gives the card width that keeps the ring inside the box:
+         pw = D*tan(pi/N) / GAP. Below N=9 the box cap is smaller and wins, so
+         this changes nothing at today's seven. */
+      if (!mini) {
+        const bound = (w * RING_FIT) * Math.tan(Math.PI / N) / GAP;
+        pw = Math.max(PW_MIN, Math.min(pw, bound));
+      }
       R = Math.max(FLOOR * pw, (pw * GAP) / (2 * Math.tan(Math.PI / N)));
       stage.style.setProperty("--pw", pw.toFixed(1) + "px");
       stage.style.setProperty("--ph", (pw * ASPECT).toFixed(1) + "px");
@@ -90,7 +119,10 @@
       // under ~190 px a placard can't hold name + blurb; drop the blurb
       stage.classList.toggle("compact", !mini && pw < 190);
       cards.forEach((c, i) => {
-        c.style.transform = `rotateY(${(i * step).toFixed(2)}deg) translateZ(${R.toFixed(1)}px) rotateX(${-TILT}deg)`;
+        // base transform kept on the node: paint() appends the depth scale to
+        // it every frame, and rebuilding this string there would be wasteful
+        c._base = `rotateY(${(i * step).toFixed(2)}deg) translateZ(${R.toFixed(1)}px) rotateX(${-TILT}deg)`;
+        c.style.transform = c._base;
       });
       paint();
     }
@@ -112,6 +144,9 @@
            ghost in the mk24 screenshot.) */
         const dist = Math.abs(((i * step + angle) % 360 + 540) % 360 - 180) / 180;
         c.style.opacity = (1 - 0.62 * Math.pow(dist, 1.3)).toFixed(3);
+        const spread = mini ? 0.5 : 1;        // the docked deck stays tidy
+        const s = FRONT_S - (FRONT_S - SIDE_S) * spread * Math.pow(dist, DEPTH_EXP);
+        if (c._base) c.style.transform = `${c._base} scale(${s.toFixed(3)})`;
         const on = i === f;
         c.classList.toggle("face", on);
         c.setAttribute("aria-selected", on ? "true" : "false");

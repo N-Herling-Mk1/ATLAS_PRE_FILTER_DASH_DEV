@@ -27,15 +27,29 @@ body[data-page="hub"] .sheet { padding-bottom: 28px; }
    1+1 border, 26+28 padding. Every row inside is minmax(0, ...) so nothing can
    push the page past the fold; below 560 px of height it scrolls rather than
    crushing the deck. */
-.hub { display: grid; gap: 14px;
+/* fills main exactly, so main's own overflow never has anything to scroll */
+.hub { height: 100%; min-height: 0; display: grid; gap: 14px;
   grid-template-columns: minmax(240px, 19vw) minmax(0, 1fr);
   grid-template-rows: auto minmax(0, 1fr);
   grid-template-areas: "rail band" "rail stage";
-  height: calc(100vh - 76px); height: calc(100dvh - 76px); min-height: 560px; }
+  /* No viewport maths and no floor here: main is already exactly the space
+     that is left, so the hub just fills it. The 560px floor this rule used to
+     carry was itself a scrollbar on any window under ~640px tall. */
+  }
 .rail { grid-area: rail; display: grid; gap: 14px; min-height: 0;
   grid-template-rows: auto auto minmax(120px, 1fr); }
-.band { grid-area: band; }
-.stage { grid-area: stage; min-height: 0; display: grid; }
+.band { grid-area: band; min-height: 0; }
+.stage { grid-area: stage; min-height: 0; display: grid; position: relative;
+  overflow: hidden; }
+/* The trace canvas covers the STAGE, not the deck: the deck docks away the
+   moment a section opens, and tracks anchored to it would glide off with it. */
+.trace-fx { position: absolute; inset: 0; width: 100%; height: 100%;
+  pointer-events: none; z-index: 6; opacity: 0; transition: opacity .1s linear; }
+.trace-fx.run { opacity: 1; }
+/* the buttons' static, drawn on the same stage rather than one canvas each */
+.btn-fx { position: absolute; inset: 0; width: 100%; height: 100%;
+  pointer-events: none; z-index: 7; opacity: 0; transition: opacity .09s linear; }
+.btn-fx.run { opacity: 1; }
 
 /* rounded panels (mk25b) -- the outer panels at 14 px, what sits inside them
    one step smaller so the corners nest */
@@ -210,12 +224,23 @@ body[data-page="hub"] { display: flow-root; }
    leaves the dock -- so placement is by grid area, not source order. */
 .deck-wrap { display: grid; min-height: 0; gap: 8px; align-items: center;
   grid-template-columns: auto minmax(0, 1fr); grid-template-areas: "console deck"; }
-.deck-host { grid-area: deck; position: relative; height: 100%; min-height: 260px; }
+.deck-host { grid-area: deck; position: relative; height: 100%; min-height: 160px; }
+/* The ring centres in the stage's CONTENT box, so padding at the bottom lifts
+   it: the deck rises by half the padding. One number, --deck-lift, and the
+   perspective origin follows it so the rake stays aimed at the front face
+   rather than at empty space below it. */
 .deck-stage { position: absolute; inset: 0; display: grid; place-items: center;
-  perspective-origin: 50% 38%; touch-action: pan-y; cursor: grab; user-select: none; }
+  --deck-lift: clamp(38px, 8vh, 104px);
+  box-sizing: border-box; padding-bottom: calc(var(--deck-lift) * 2);
+  perspective-origin: 50% 31%; touch-action: pan-y; cursor: grab; user-select: none; }
 .deck-stage:focus-visible { outline: 1px dashed var(--rule-hi); outline-offset: -6px; }
 .deck-stage.dragging { cursor: grabbing; }
-.deck-stage.mini { cursor: pointer; perspective-origin: 50% 30%; }
+/* The dock slot is about 160 px tall and the stage's lift is up to 104, so the
+   mini deck inherited a padding-bottom of 208 -- a negative content box, and a
+   ring centred above the slot entirely. The lift belongs to the full-size deck
+   only; the docked one centres. */
+.deck-stage.mini { cursor: pointer; perspective-origin: 50% 38%;
+  --deck-lift: 0px; padding-bottom: 0; }
 .deck-ring { position: relative; width: 0; height: 0; transform-style: preserve-3d; will-change: transform; }
 
 /* placards -- nathan_herling css/deck.css .placard, on the dashboard palette.
@@ -344,6 +369,21 @@ body[data-page="hub"] { display: flow-root; }
   color: var(--accent); text-transform: uppercase; border: 1px solid var(--rule-hi);
   padding: 6px 9px; white-space: nowrap; }
 .screen-body { overflow: auto; min-height: 0; }
+/* ------------------------------------------------------------ stub sheet -- */
+.stub { max-width: 78ch; display: grid; gap: 16px; }
+.stub-lead { margin: 0; font-size: 14px; line-height: 1.6; color: var(--ink); }
+.stub-h { margin: 4px 0 0; font-family: var(--mono); font-size: 10px; letter-spacing: .2em;
+  text-transform: uppercase; color: var(--meta); font-weight: normal; }
+.stub-plan { list-style: none; margin: 0; padding: 0; display: grid; gap: 1px;
+  background: var(--rule); border: 1px solid var(--rule); }
+.stub-plan li { display: grid; gap: 3px; padding: 11px 14px; background: var(--steel-2); }
+.stub-plan b { font-family: var(--display); font-weight: 700; font-size: 13px;
+  letter-spacing: .04em; color: #fff; }
+.stub-plan span { font-size: 12.5px; line-height: 1.5; color: var(--ink-2); }
+.stub-note { margin: 0; font-size: 12px; color: var(--meta);
+  border-left: 2px solid var(--rule-hi); padding-left: 11px; }
+.sheet-fallback { font-size: 12.5px; color: var(--ink-2); }
+.sheet-fallback code { font-family: var(--mono); color: var(--accent); }
 
 /* short screens: tighten the rail so TV + nav + dock fit the height */
 @media (max-height: 860px) {

@@ -16,6 +16,21 @@
   if (!hub) return;
   const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   const Sfx = window.Sfx || {snap() {}, deal() {}, dock() {}, on: () => false, set() {}};
+  /* Circuit tracks, same gesture as the sign-in button. The canvas lives on the
+     stage rather than on the deck, so the tracks stay where the face was while
+     the deck glides off to the dock. */
+  const stageEl = document.querySelector(".stage");
+  const trace = window.Traces ? window.Traces.attach(stageEl) : {fire() {}, clear() {}};
+  const btnfx = window.BtnFx ? window.BtnFx.mount(stageEl) : {watch() {}};
+
+  // where the front face sits, in stage coordinates
+  function faceRect() {
+    const f = document.querySelector(".deck-face.face, .placard.face");
+    if (!f || !stageEl) return null;
+    const a = f.getBoundingClientRect(), b = stageEl.getBoundingClientRect();
+    if (!a.width) return null;
+    return {x: a.left - b.left, y: a.top - b.top, w: a.width, h: a.height};
+  }
 
   const cards = [...document.querySelectorAll(".card")];
   const N = cards.length;
@@ -86,11 +101,22 @@
   });
   if (gimbal) gimbal.addEventListener("pointerdown", () => hit(gimbal, 260));
 
+  /* The gimbal's own controls get the sign-in button's gesture: static on
+     hover, static driven to full on press, tracks sprawling out of the edge.
+     btnfx draws the field, traces.js draws the tracks -- one effect, one owner,
+     rather than a second copy of either. */
+  function armButton(el, bleed) {
+    if (!el) return;
+    btnfx.watch(el, r => trace.fire(r, {bleed: bleed || 56}));
+  }
+
   const prev = document.getElementById("deck-prev");
   const next = document.getElementById("deck-next");
+  armButton(prev, 48); armButton(next, 48);
   if (prev) prev.addEventListener("click", () => setSel(sel - 1));
   if (next) next.addEventListener("click", () => setSel(sel + 1));
   const go = document.getElementById("deck-go");
+  armButton(go, 64);
   if (go) go.addEventListener("click", openSection);
 
   // -------------------------------------------------------------- gimbal --
@@ -191,15 +217,35 @@
     host.addEventListener("transitionend", done);
   }
 
+  /* Show the stub for this section and hide the rest. Every sheet is in the
+     DOM from render; swapping `hidden` is cheaper and steadier than building
+     markup per open, and it means a half-built sheet can keep its own state. */
+  function showSheet(id) {
+    const sheets = document.querySelectorAll(".screen-body .sheet");
+    let found = false;
+    sheets.forEach(el => {
+      const on = el.dataset.sheet === id;
+      el.hidden = !on;
+      if (on && el.children.length) found = true;
+    });
+    const fb = document.getElementById("sheet-fallback");
+    if (fb) fb.hidden = found;
+  }
+
   function openSection() {
     if (open) return;
     const f = faces[sel];
+    // fire BEFORE the dock glide, while the face is still where the user sees it
+    // inward: the tracks write themselves across the panel the section is
+    // opening into, rather than spraying off its edges
+    trace.fire(faceRect(), {bleed: 86, inward: true});
     open = true;
     hub.dataset.state = "screen";
     if (screen) screen.hidden = false;
     if (scrName) scrName.textContent = f.name;
     if (scrGlyph) scrGlyph.textContent = f.glyph;
     if (scrBlurb) scrBlurb.textContent = f.blurb;
+    showSheet(f.id);
     if (dockEmpty) dockEmpty.hidden = true;
     moveDeck(dock);
     if (dock) { dock.classList.add("live"); dock.setAttribute("role", "button");
@@ -254,14 +300,14 @@
   const pic = document.getElementById("tv-pic");
   const layers = [...document.querySelectorAll(".tv-l")];
   const tvScreen = document.querySelector(".tv-screen");
-  /* RGB shear: a 260 ms tear every 3-8 s, plus one on every channel change.
-     Restarting the class needs a reflow in between or the animation won't rerun. */
-  function shear() {
+  /* RGB shear: a short tear. Restarting the class needs a reflow in between or
+     the animation will not rerun. Scheduled by the glitch budget below -- it no
+     longer runs on a loop of its own, which is what made it periodic. */
+  function shear(ms) {
     if (reduce || !tvScreen || document.hidden) return;
     tvScreen.classList.remove("shear"); void tvScreen.offsetWidth; tvScreen.classList.add("shear");
-    setTimeout(() => tvScreen.classList.remove("shear"), 280);
+    setTimeout(() => tvScreen.classList.remove("shear"), ms || 280);
   }
-  (function shearLoop() { setTimeout(() => { shear(); shearLoop(); }, 3000 + Math.random() * 5000); })();
   const fx = document.getElementById("tv-fx");
   const chOut = document.getElementById("tv-ch");
   const tvName = document.getElementById("tv-name");
@@ -269,6 +315,56 @@
   const DWELL = 10000, BREAK = 620;
 
   let shots = [], ch = -1, noise = 1, raf = null, field = 0, timer = null;
+  let roll = null, glitches = [];
+
+  /* How the tube behaves once a picture is up. Static belongs to the CHANGE,
+     not to the picture -- so between changes the screen is clear, apart from a
+     budget of brief glitches. CLEAR is the share of the dwell with nothing on
+     it at all; the rest is spent on tears and rolls placed at random, so the
+     interval between them is never the same twice. A fixed-period loop is what
+     makes an effect read as a loop. */
+  const CLEAR = 0.75;
+  const rnd2 = (a, b) => a + Math.random() * (b - a);
+
+  function clearGlitches() {
+    glitches.forEach(clearTimeout);
+    glitches = [];
+    roll = null;
+  }
+
+  function scheduleGlitches(msLeft) {
+    clearGlitches();
+    if (reduce || msLeft < 800) return;
+    let budget = msLeft * (1 - CLEAR);
+    const plan = [];
+    while (budget > 200) {
+      const isShear = Math.random() < 0.55;
+      const dur = isShear ? rnd2(180, 320) : rnd2(420, 1000);
+      if (dur > budget) break;
+      budget -= dur;
+      plan.push({isShear, dur});
+    }
+    /* Placement: rather than picking random starts and shoving collisions
+       apart -- which drops any event landing too late, and measured 20%
+       coverage with some dwells as low as 5% -- take the time NOT spent on
+       effects and cut it into n+1 random gaps. Every event then fits by
+       construction, coverage equals the budget, and the gaps are still
+       different every time. */
+    const spent = plan.reduce((t, q) => t + q.dur, 0);
+    const gaps = plan.map(() => Math.random()).concat([Math.random(), Math.random()]);
+    const gSum = gaps.reduce((a, b) => a + b, 0) || 1;
+    const free = Math.max(0, msLeft - spent);
+    let at = free * (gaps[0] / gSum);
+    plan.forEach((q, k) => {
+      const start = at;
+      at += q.dur + free * (gaps[k + 1] / gSum);
+      glitches.push(setTimeout(() => {
+        if (document.hidden) return;
+        if (q.isShear) shear(q.dur);
+        else { roll = {t0: performance.now(), dur: q.dur}; kick(); }
+      }, start));
+    });
+  }
   const hash = (i, r) => { const x = Math.sin(i * 127.1 + r * 311.7) * 43758.5453; return x - Math.floor(x); };
 
   function drawNoise() {
@@ -283,6 +379,21 @@
     const g = fx.getContext("2d");
     g.setTransform(d2, 0, 0, d2, 0, 0);
     g.clearRect(0, 0, r.width, r.height);
+
+    /* Cathode roll: the bright seam of a frame that did not quite lock,
+       travelling down the tube. Drawn as a soft band plus a thin hot line at
+       its leading edge, with a little static riding along so it reads as the
+       picture losing hold rather than a light sweeping over it. */
+    let rollY = -1;
+    if (roll) {
+      const k = (performance.now() - roll.t0) / roll.dur;
+      if (k >= 1) { roll = null; }
+      else {
+        rollY = (k * 1.25 - 0.12) * r.height;
+        noise = Math.max(noise, 0.10 + 0.06 * Math.sin(k * Math.PI));
+      }
+    }
+
     if (noise > 0.01) {
       const px = 3 + 4 * noise;
       const cols = Math.max(1, Math.round(r.width / px)), rows = Math.max(1, Math.round(r.height / px));
@@ -299,7 +410,19 @@
         g.fillRect(x * cw, y * chh, cw, chh);
       }
     }
-    if (noise > 0.01 && !reduce) raf = requestAnimationFrame(drawNoise);
+    if (rollY >= 0) {
+      const bandH = r.height * 0.16;
+      const grd = g.createLinearGradient(0, rollY - bandH, 0, rollY + bandH * 0.4);
+      grd.addColorStop(0, "rgba(180,255,214,0)");
+      grd.addColorStop(0.62, "rgba(180,255,214,.10)");
+      grd.addColorStop(0.88, "rgba(226,255,238,.20)");
+      grd.addColorStop(1, "rgba(180,255,214,0)");
+      g.fillStyle = grd;
+      g.fillRect(0, rollY - bandH, r.width, bandH * 1.4);
+      g.fillStyle = "rgba(233,255,243,.35)";
+      g.fillRect(0, rollY, r.width, 1.5);
+    }
+    if ((noise > 0.01 || roll) && !reduce) raf = requestAnimationFrame(drawNoise);
   }
   const kick = () => { if (!raf && !reduce) raf = requestAnimationFrame(drawNoise); };
 
@@ -308,6 +431,7 @@
     ch = ((i % shots.length) + shots.length) % shots.length;
     const src = shots[ch];
     noise = 1; kick();
+    clearGlitches();
     if (pic) pic.classList.remove("on");
     setTimeout(() => {
       layers.forEach(l => { l.src = src; });
@@ -319,9 +443,13 @@
       (function fade() {
         const k = Math.min(1, (performance.now() - t0) / 420);
         noise = 0.18 * (1 - k);
-        if (k < 1) requestAnimationFrame(fade); else noise = 0.05;
+        // all the way to zero: the residual 0.05 left a permanent crawl on the
+        // picture, which is what made the static feel like a property of the
+        // TV rather than of the change
+        if (k < 1) requestAnimationFrame(fade); else noise = 0;
         kick();
       })();
+      scheduleGlitches(DWELL - BREAK);
     }, reduce ? 0 : BREAK * 0.45);
     clearTimeout(timer);
     timer = setTimeout(() => show(ch + 1), DWELL);
@@ -342,7 +470,8 @@
   }
 
   document.addEventListener("visibilitychange", () => {
-    if (document.hidden) { clearTimeout(timer); if (raf) { cancelAnimationFrame(raf); raf = null; } }
+    if (document.hidden) { clearTimeout(timer); clearGlitches();
+      if (raf) { cancelAnimationFrame(raf); raf = null; } }
     else { kick(); if (shots.length) timer = setTimeout(() => show(ch + 1), DWELL); }
   });
 

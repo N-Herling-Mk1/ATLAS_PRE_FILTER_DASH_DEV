@@ -128,8 +128,16 @@
         <button type="button" class="link" id="screen-back">&larr; Back to deck</button>
       </div>
       <div class="screen-body" id="screen-body">
-        <p class="small muted">This section has no sheet yet. Opening it here is the navigation
-          working; the content arrives when the sheet is built.</p>
+        {# One stub per section, all rendered, one shown. `ignore missing` on
+           purpose: a section without a template should leave the sheet empty,
+           not 500 the whole hub. #}
+        {% for id, name, glyph, blurb in tiles %}
+        <div class="sheet" data-sheet="{{ id }}" hidden>
+          {% include "sections/" ~ id ~ ".html" ignore missing %}
+        </div>
+        {% endfor %}
+        <p class="sheet-fallback" id="sheet-fallback" hidden>No sheet template for this section
+          yet. Add <code>web/templates/sections/&lt;id&gt;.html</code> and it appears here.</p>
       </div>
     </div>
   </section>
@@ -139,5 +147,7 @@
 {% block scripts %}
 <script src="/static/app/js/sfx.js"></script>
 <script src="/static/app/js/deck.js"></script>
+<script src="/static/app/js/traces.js"></script>
+<script src="/static/app/js/btnfx.js"></script>
 <script src="/static/app/js/hub.js"></script>
 {% endblock %}

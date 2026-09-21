@@ -769,7 +769,7 @@
       lines: [["detector .... reset", "dim"], ["STATUS: SIGNED OUT", "hot"]],
     },
     busy: {
-      tone: "busy", plate: "trigger fired", meta: "checking", note: "checking password", cls: "",
+      tone: "busy", plate: "trigger fired", meta: "checking", note: "checking password", cls: "busy",
       lines: [["> auth: sending", "dim"], ["trigger ..... fired", "dim"]],
     },
     in: {
@@ -788,6 +788,26 @@
     },
   };
 
+  /* The three-state diagram. Which node is lit follows the plate's own class,
+     so there is no second copy of the state to fall out of step:
+       no class / typing+busy / open+denied  ->  node 1 / 2 / 3
+     Colour is not set here at all -- every node inherits --st from the plate. */
+  function lightDiagram() {
+    if (!form) return;
+    const cl = form.classList;
+    const stage = cl.contains("open") || cl.contains("denied") ? 3
+                : cl.contains("typing") || cl.contains("busy") ? 2 : 1;
+    for (let i = 1; i <= 3; i++) {
+      const n = document.querySelector(`.diag .n${i}`);
+      const l = document.querySelector(`.diag .l${i}`);
+      if (n) n.classList.toggle("on", i === stage);
+      if (l) l.classList.toggle("on", i === stage);
+    }
+    const w1 = document.querySelector(".diag .w1"), w2 = document.querySelector(".diag .w2");
+    if (w1) w1.classList.toggle("lit", stage >= 2);
+    if (w2) w2.classList.toggle("lit", stage >= 3);
+  }
+
   function setState(key) {
     const st = STATES[key];
     if (!st) return;
@@ -796,9 +816,10 @@
     if (rdNote) rdNote.textContent = st.note;
     if (metaEl) metaEl.textContent = st.meta;
     if (form) {
-      form.classList.remove("open", "denied");
+      form.classList.remove("typing", "busy", "open", "denied");
       void form.offsetWidth;                            // restart the reject animation
       if (st.cls) form.classList.add(st.cls);
+      lightDiagram();
     }
   }
 
@@ -814,6 +835,7 @@
     if (st0 === "rejected") say("STATUS: REJECTED", "bad");
     else say("STATUS: SIGNED OUT", "hot");
   }
+  lightDiagram();                       // the server may have rendered a verdict
 
   // -------------------------------------------------------- the button ----
   /* Static on the button face. Hover runs it continuously and thin -- every cell
@@ -833,58 +855,384 @@
   };
   const pxTarget = () => (hovering ? HOVER_LVL : 0);
 
-  function pxFrame() {
+  /* ---- the LLP diagram ------------------------------------------------
+     pp -> ZH, Z -> l+l-, H -> SS, each S long-lived and decaying at a
+     DISPLACED vertex to q qbar. This is the channel the search actually runs
+     on, drawn to match the analysis figure: three-line proton beams into a
+     production blob, a wavy Z with its lepton pair, a dashed Higgs, and the
+     two scalars as DOUBLE-dashed lines -- which is how S is drawn in the
+     paper, and the reason they are the one element not in the state colour.
+
+     Coordinates are fractions of the button and every stroke scales off
+     min(w/420, h/76), so it holds at any width. It is REVEALED, not drawn:
+     the whole diagram fades up and down on `lvl`, complete at every frame. */
+  const DIAG = {
+    blob: [0.19, 0.50],
+    zv:   [0.40, 0.16],                    // Z decay
+    hv:   [0.42, 0.64],                    // H -> SS
+    sv:   [[0.62, 0.40], [0.62, 0.86]],    // the two displaced vertices
+    lep:  [[0.55, 0.05], [0.60, 0.27]],    // l+ l-
+  };
+  /* FIT: the diagram is scaled uniformly into the left FIT of the face, which
+     leaves the rest for the label. At 0.60 the widest element lands at
+     0.88 * 0.60 = 0.53 of the width, so there is a clear 0.47 for "Sign in".
+     Ink, not the state colour: the card is white while this is visible. */
+  const FIT = 0.60;
+  const INK_LINE = "rgba(10,14,22,.92)";
+  const INK_BEAM = "rgba(10,14,22,.80)";
+  const INK_S    = "rgba(10,14,22,.95)";      // still double-dashed, so still S
+  const INK_BLOB = "rgba(120,132,150,.95)";
+
+  function tintRGB() {
+    if (!form) return "190,214,255";
+    const raw = getComputedStyle(form).getPropertyValue("--st").trim();
+    if (raw === diagFrom) return diagTo;
+    diagFrom = raw;
+    let rgb = null;
+    let m = raw.match(/^#([0-9a-f]{6})$/i);
+    if (m) rgb = [0, 2, 4].map(k => parseInt(m[1].slice(k, k + 2), 16));
+    else {
+      m = raw.match(/rgba?\(([^)]+)\)/i);
+      if (m) rgb = m[1].split(",").slice(0, 3).map(v => parseInt(v, 10));
+    }
+    diagTo = (!rgb || rgb.some(isNaN)) ? "190,214,255"
+           : rgb.map(v => Math.round(v + (255 - v) * 0.55)).join(",");
+    return diagTo;
+  }
+  let diagFrom = "", diagTo = "190,214,255";
+
+  function wave(g, x1, y1, x2, y2, amp, turns) {
+    const L = Math.hypot(x2 - x1, y2 - y1);
+    const ux = (x2 - x1) / L, uy = (y2 - y1) / L, px = -uy, py = ux;
+    g.beginPath();
+    for (let i = 0; i <= 56; i++) {
+      const u = i / 56, a = Math.sin(u * turns * Math.PI * 2);
+      const X = x1 + ux * L * u + px * amp * a, Y = y1 + uy * L * u + py * amp * a;
+      if (i) g.lineTo(X, Y); else g.moveTo(X, Y);
+    }
+    g.stroke();
+  }
+  function dash(g, x1, y1, x2, y2, on, off) {
+    const L = Math.hypot(x2 - x1, y2 - y1);
+    const ux = (x2 - x1) / L, uy = (y2 - y1) / L;
+    g.beginPath();
+    for (let d = 0; d < L; d += on + off) {
+      const e = Math.min(L, d + on);
+      g.moveTo(x1 + ux * d, y1 + uy * d);
+      g.lineTo(x1 + ux * e, y1 + uy * e);
+    }
+    g.stroke();
+  }
+  // S is a DOUBLE dashed line in the analysis figure: two rails, offset either
+  // side of the path, not one thicker dash
+  function ddash(g, x1, y1, x2, y2, on, off, sep) {
+    const L = Math.hypot(x2 - x1, y2 - y1);
+    const px = -(y2 - y1) / L, py = (x2 - x1) / L;
+    [-sep / 2, sep / 2].forEach(o =>
+      dash(g, x1 + px * o, y1 + py * o, x2 + px * o, y2 + py * o, on, off));
+  }
+  const seg = (g, x1, y1, x2, y2) => { g.beginPath(); g.moveTo(x1, y1); g.lineTo(x2, y2); g.stroke(); };
+
+  function drawDiagram(g, w, h, lvl) {
+    if (lvl <= 0.02) return;
+    const k = Math.min(w / 420, h / 76);
+    const X = f => f * w, Y = f => f * h;
+    const [bx, by] = DIAG.blob, [zx, zy] = DIAG.zv, [hx, hy] = DIAG.hv;
+
+    /* The card is white on hover, so the diagram is drawn in ink rather than
+       in the state colour, and it is scaled into the LEFT of the face -- the
+       label has moved right, and the two must not collide. FIT is uniform, so
+       nothing is squashed; the stroke widths are divided by it so they come
+       out the same visual weight they had at full size. */
+    g.save();
+    g.lineCap = "round"; g.lineJoin = "round";
+    g.globalAlpha = Math.min(1, lvl / HOVER_LVL);
+    g.translate(0, h * (1 - FIT) / 2);
+    g.scale(FIT, FIT);
+    const kk = k / FIT;
+    g.shadowBlur = 0;
+
+    // the two proton beams, three lines each
+    g.strokeStyle = INK_BEAM; g.lineWidth = 1.5 * kk;
+    [0.15, 0.85].forEach(base => [-0.05, 0, 0.05].forEach(o =>
+      seg(g, X(0.02), Y(base + o), X(bx), Y(by + o * 0.30))));
+
+    // Z, and the lepton pair it decays to
+    g.lineWidth = 1.7 * kk;
+    wave(g, X(bx), Y(by), X(zx), Y(zy), 2.8 * kk, 4);
+    g.strokeStyle = INK_LINE; g.lineWidth = 1.6 * kk;
+    DIAG.lep.forEach(([lx, ly]) => seg(g, X(zx), Y(zy), X(lx), Y(ly)));
+
+    // the Higgs
+    g.lineWidth = 1.8 * kk;
+    dash(g, X(bx), Y(by), X(hx), Y(hy), 7 * kk, 5 * kk);
+
+    // the two long-lived scalars
+    g.strokeStyle = INK_S; g.lineWidth = 1.5 * kk;
+    DIAG.sv.forEach(([sx, sy]) => ddash(g, X(hx), Y(hy), X(sx), Y(sy), 6 * kk, 4 * kk, 2.8 * kk));
+
+    // displaced vertices, and the quark pair out of each
+    DIAG.sv.forEach(([sx, sy]) => {
+      g.strokeStyle = INK_LINE; g.lineWidth = 1.5 * kk;
+      [-0.20, 0.16].forEach(o => {
+        const ty = Math.min(0.95, Math.max(0.05, sy + o));
+        seg(g, X(sx), Y(sy), X(0.88), Y(ty));
+      });
+      g.strokeStyle = INK_LINE; g.lineWidth = 1.4 * kk;
+      g.beginPath(); g.arc(X(sx), Y(sy), 3.2 * kk, 0, Math.PI * 2); g.stroke();
+    });
+
+    // the production blob last, on top of the beams that meet it
+    g.fillStyle = INK_BLOB;
+    g.strokeStyle = INK_LINE; g.lineWidth = 1.2 * kk;
+    g.beginPath(); g.arc(X(bx), Y(by), 5 * kk, 0, Math.PI * 2); g.fill(); g.stroke();
+    g.restore();
+  }
+
+  function pxFrame(now) {
     pxRaf = null;
     if (!pxCv || !btnWrap) return;
     const r = btnWrap.getBoundingClientRect();
     if (!r.width) return;
+    const B = parseFloat(getComputedStyle(pxCv).getPropertyValue("--px-bleed")) || 0;
+    const CW = r.width + B * 2, CH = r.height + B * 2;
     const d2 = window.devicePixelRatio || 1;
-    if (pxCv.width !== Math.round(r.width * d2)) {
-      pxCv.width = Math.round(r.width * d2); pxCv.height = Math.round(r.height * d2);
+    if (pxCv.width !== Math.round(CW * d2)) {
+      pxCv.width = Math.round(CW * d2); pxCv.height = Math.round(CH * d2);
     }
     const g = pxCv.getContext("2d");
     g.setTransform(d2, 0, 0, d2, 0, 0);
+    now = now || performance.now();
 
     // up fast, down fast: this is a button, not a mood
     const target = pxTarget();
     lvl += (target - lvl) * (lvl > HOVER_LVL ? 0.16 : 0.30);
     if (Math.abs(target - lvl) < 0.008) lvl = target;
 
-    g.clearRect(0, 0, r.width, r.height);
-    if (lvl <= 0.008) { pxCv.classList.remove("run"); return; }
+    g.clearRect(0, 0, CW, CH);
+    const live = traces.length && now < traceEnd;
+    if (lvl <= 0.008 && !live) { pxCv.classList.remove("run"); traces.length = 0; return; }
     pxCv.classList.add("run");
+    g.save();
+    g.translate(B, B);                        // (0,0) is now the button's corner
 
     const over = Math.max(0, (lvl - HOVER_LVL) / (1 - HOVER_LVL));
-    const px = PX_HAZE + (PX_FIRE - PX_HAZE) * over;
-    const cols = Math.max(1, Math.round(r.width / px)), rows = Math.max(1, Math.round(r.height / px));
-    const cw = r.width / cols, ch = r.height / rows;
-    const peak = 0.06 + 0.98 * lvl;           // hover ~0.35 ceiling, fired ~1: total
+    drawDiagram(g, r.width, r.height, lvl);
 
-    field++;                                  // a fresh field every frame: static
-    for (let x = 0; x < cols; x++) for (let y = 0; y < rows; y++) {
-      const n = hash(x * rows + y, field);
-      // quantised to four levels, weighted dim, so it grains rather than glares
-      const a = Math.round(Math.pow(n, 1.6) * peak * 4) / 4;
-      if (a < 0.04) continue;
-      g.fillStyle = n < 0.46 ? `rgba(0,0,0,${(a * 0.62).toFixed(3)})`        // dark speckle
-                   : n < 0.86 ? `rgba(255,186,194,${(a * 0.72).toFixed(3)})`
-                              : `rgba(255,255,255,${a.toFixed(3)})`;
-      g.fillRect(x * cw, y * ch, cw, ch);
-    }
-    if (over > 0) {                           // the wash that takes it to "all static"
-      g.fillStyle = `rgba(226,232,240,${(0.24 * over).toFixed(3)})`;
-      g.fillRect(0, 0, r.width, r.height);
-    }
-    if (lvl > 0.008) pxKick();                // hover keeps it running continuously
+    drawTraces(g, now, r.width, r.height);
+    g.restore();
+    if (lvl > 0.008 || live) pxKick();        // hover and the sprawl both keep it running
   }
   function pxKick() { if (!pxRaf && !reduce) pxRaf = requestAnimationFrame(pxFrame); }
+  /* ---- circuit traces -------------------------------------------------
+     On press, tracks run out of the button's edge the way a trace leaves a pad:
+     orthogonal runs with 45-degree elbows, a square pad at each corner and a via
+     at the tip. They sprawl out, hold, then draw back into the edge they came
+     from -- the retract is the same polyline consumed from the START, so it
+     reads as the charge returning rather than the trace fading.
+
+     Geometry is built once per press in button-local coordinates, so a resize
+     mid-animation cannot leave a trace hanging in the wrong place. */
+  const traces = [];
+  let traceEnd = 0;
+  const T_OUT = 360, T_HOLD = 110, T_BACK = 300;
+
+  /* Tracks may not cross, and two that meet run parallel -- one rule does both:
+     no segment may come within PITCH of another. A crossing is distance zero,
+     so forbidding the clearance forbids the crossing, and two tracks heading
+     the same way end up exactly PITCH apart. If nothing fits, the track stops
+     rather than being forced through: a short trace is plausible, two traces
+     shorted together is not. Same router as traces.js. */
+  function segDist(p, q, r2, s2) {
+    const sub = (a, b) => [a[0] - b[0], a[1] - b[1]];
+    const cr = (a, b) => a[0] * b[1] - a[1] * b[0];
+    const dt = (a, b) => a[0] * b[0] + a[1] * b[1];
+    const ptSeg = (p0, a, b) => {
+      const ab = sub(b, a), L = dt(ab, ab);
+      if (L === 0) return Math.hypot(...sub(p0, a));
+      const t = Math.max(0, Math.min(1, dt(sub(p0, a), ab) / L));
+      return Math.hypot(p0[0] - (a[0] + ab[0] * t), p0[1] - (a[1] + ab[1] * t));
+    };
+    const d1 = sub(q, p), d2 = sub(s2, r2), den = cr(d1, d2);
+    if (Math.abs(den) > 1e-9) {
+      const t = cr(sub(r2, p), d2) / den, u = cr(sub(r2, p), d1) / den;
+      if (t >= 0 && t <= 1 && u >= 0 && u <= 1) return 0;
+    }
+    return Math.min(ptSeg(p, r2, s2), ptSeg(q, r2, s2), ptSeg(r2, p, q), ptSeg(s2, p, q));
+  }
+
+  function buildTraces(w, h, bleed) {
+    traces.length = 0;
+    const room = Math.max(24, bleed - 10);
+    const PITCH = Math.max(6, room * 0.075);
+    const snap = v => Math.round(v / PITCH) * PITCH;
+    const placed = [], starts = [];
+    const TRIES = 12, START_TRIES = 20;
+
+    for (let i = 0; i < 14; i++) {
+      const side = i % 4;
+      let x = 0, y = 0, dx = 0, dy = 0, got = false;
+      for (let a = 0; a < START_TRIES && !got; a++) {
+        if (side === 0) { x = rnd(w * 0.10, w * 0.90); y = 0; dx = 0; dy = -1; }
+        else if (side === 2) { x = rnd(w * 0.10, w * 0.90); y = h; dx = 0; dy = 1; }
+        else if (side === 1) { x = w; y = rnd(h * 0.18, h * 0.82); dx = 1; dy = 0; }
+        else { x = 0; y = rnd(h * 0.18, h * 0.82); dx = -1; dy = 0; }
+        got = starts.every(s => Math.hypot(x - s[0], y - s[1]) >= PITCH * 1.5)
+           && placed.every(([A, B]) => segDist([x, y], [x, y], A, B) >= PITCH);
+      }
+      if (!got) continue;
+      starts.push([x, y]);
+
+      const pts = [[x, y]];
+      let cx = x, cy = y;
+      const own = [];
+      for (let k = 0; k < 3; k++) {
+        let laid = false;
+        for (let a = 0; a < TRIES && !laid; a++) {
+          const len = snap(rnd(room * 0.15, room * 0.29));
+          const mx = cx + dx * len, my = cy + dy * len;
+          const turn = Math.random() < 0.5 ? 1 : -1;
+          const diag = snap(rnd(room * 0.08, room * 0.16));
+          const ndx = dx === 0 ? turn : dx, ndy = dy === 0 ? turn : dy;
+          const ex = mx + (dx === 0 ? ndx : dx) * diag, ey = my + (dy === 0 ? ndy : dy) * diag;
+          if (Math.hypot(mx - cx, my - cy) < 2) continue;
+
+          const cand = [[[cx, cy], [mx, my]], [[mx, my], [ex, ey]]];
+          let ok = true;
+          for (let si = 0; si < cand.length && ok; si++) {
+            const [A, B] = cand[si];
+            for (let j = 0; j < placed.length; j++) {
+              // only the first candidate shares a vertex with the last segment
+              if (si === 0 && own.length && j === own[own.length - 1]) continue;
+              if (segDist(A, B, placed[j][0], placed[j][1]) < PITCH) { ok = false; break; }
+            }
+          }
+          if (!ok) continue;
+
+          cand.forEach(c => { placed.push(c); own.push(placed.length - 1); });
+          pts.push([mx, my], [ex, ey]);
+          cx = ex; cy = ey;
+          if (dx === 0) { dx = ndx; dy = 0; } else { dy = ndy; dx = 0; }
+          laid = true;
+        }
+        if (!laid) break;
+      }
+      if (pts.length < 2) continue;
+
+      const seg = [];
+      let total = 0;
+      for (let k = 1; k < pts.length; k++) {
+        total += Math.hypot(pts[k][0] - pts[k - 1][0], pts[k][1] - pts[k - 1][1]);
+        seg.push(total);
+      }
+      traces.push({pts, seg, total, delay: Math.random() * 90, hot: Math.random() < 0.35});
+    }
+  }
+
+  // walk the polyline from `from` to `to` in length units, emitting a path
+  function strokeSpan(g, t, from, to) {
+    if (to <= from) return null;
+    let started = false, tip = null;
+    g.beginPath();
+    for (let k = 1; k < t.pts.length; k++) {
+      const a = t.seg[k - 2] || 0, b = t.seg[k - 1];
+      if (b < from || a > to) continue;
+      const p0 = t.pts[k - 1], p1 = t.pts[k];
+      const len = b - a;
+      const u0 = Math.max(0, (from - a) / len), u1 = Math.min(1, (to - a) / len);
+      const x0 = p0[0] + (p1[0] - p0[0]) * u0, y0 = p0[1] + (p1[1] - p0[1]) * u0;
+      const x1 = p0[0] + (p1[0] - p0[0]) * u1, y1 = p0[1] + (p1[1] - p0[1]) * u1;
+      if (!started) { g.moveTo(x0, y0); started = true; }
+      g.lineTo(x1, y1);
+      tip = [x1, y1];
+    }
+    g.stroke();
+    return tip;
+  }
+
+  function drawTraces(g, now, w, h) {
+    if (!traces.length || now >= traceEnd) return;
+    const t0 = traceEnd - (T_OUT + T_HOLD + T_BACK);
+    const ease = x => 1 - Math.pow(1 - x, 2.2);
+
+    g.save();
+    g.lineCap = "square";
+    g.lineJoin = "miter";
+    traces.forEach(t => {
+      const age = now - t0 - t.delay;
+      if (age <= 0) return;
+      let from = 0, to = 0;
+      if (age < T_OUT) to = t.total * ease(age / T_OUT);
+      else if (age < T_OUT + T_HOLD) to = t.total;
+      else {
+        // Withdraw into the edge it came from: shrink the FAR end back toward
+        // the pad. Consuming from the pad end instead leaves the outer half
+        // hanging in space, detached from the button -- which is not a trace
+        // retracting, it is a trace breaking off.
+        const k = Math.min(1, (age - T_OUT - T_HOLD) / T_BACK);
+        to = t.total * (1 - ease(k));
+      }
+      if (to - from < 1) return;
+      const a = age < T_OUT + T_HOLD ? 1
+              : 0.35 + 0.65 * (1 - (age - T_OUT - T_HOLD) / T_BACK);
+      const col = t.hot ? "255,255,255" : "98,255,147";
+      g.shadowBlur = 10; g.shadowColor = `rgba(98,255,147,${(0.7 * a).toFixed(3)})`;
+      g.strokeStyle = `rgba(${col},${(0.9 * a).toFixed(3)})`;
+      g.lineWidth = t.hot ? 2 : 1.4;
+      const tip = strokeSpan(g, t, from, to);
+      // pads at the corners the trace has already reached, a via at the tip
+      g.shadowBlur = 0;
+      g.fillStyle = `rgba(${col},${(0.8 * a).toFixed(3)})`;
+      for (let k = 1; k < t.pts.length - 1; k++) {
+        const at = t.seg[k - 1];
+        if (at < from || at > to) continue;
+        g.fillRect(t.pts[k][0] - 2, t.pts[k][1] - 2, 4, 4);
+      }
+      if (tip) {
+        g.beginPath(); g.arc(tip[0], tip[1], t.hot ? 3 : 2.2, 0, TAU);
+        g.fillStyle = `rgba(${col},${a.toFixed(3)})`; g.fill();
+      }
+    });
+
+    // the haze: a soft band sitting on the button's own edge while this runs
+    const life = (now - t0) / (T_OUT + T_HOLD + T_BACK);
+    const haze = Math.sin(Math.min(1, Math.max(0, life)) * Math.PI);
+    if (haze > 0.01) {
+      /* Three passes, each wider and softer. One big blur spreads the same ink
+         thinner and reads as fog; a tight bright ring under progressively
+         wider dim ones reads as a lit edge. (Matches traces.js.) */
+      const ring = (inset, width, blur, sa, ga) => {
+        g.lineWidth = width;
+        g.shadowBlur = blur; g.shadowColor = `rgba(98,255,147,${(ga * haze).toFixed(3)})`;
+        g.strokeStyle = `rgba(98,255,147,${(sa * haze).toFixed(3)})`;
+        g.strokeRect(-inset + 0.5, -inset + 0.5, w + inset * 2 - 1, h + inset * 2 - 1);
+      };
+      // one tight bright line for the edge, then WIDE low-alpha bands for the
+      // glare -- thin bright rings just read as outlines. (Matches traces.js.)
+      g.shadowBlur = 16; g.shadowColor = `rgba(98,255,147,${(0.9 * haze).toFixed(3)})`;
+      g.lineWidth = 2; g.strokeStyle = `rgba(224,255,236,${(0.85 * haze).toFixed(3)})`;
+      g.strokeRect(0.5, 0.5, w - 1, h - 1);
+      ring(3, 7, 30, 0.13, 0.55);
+      ring(9, 15, 58, 0.065, 0.40);
+      g.shadowBlur = 0;      g.shadowBlur = 0;
+    }
+    g.restore();
+  }
+
+
+
+  /* btn-hot on the PLATE, not the button: the placeholder it pulses lives in a
+     different element, and a class on the shared ancestor reaches it without
+     needing :has(), which only landed in browsers in 2023 and would fail
+     silently rather than loudly on anything older. */
+  const hot = on => { if (form) form.classList.toggle("btn-hot", on); };
 
   if (btnWrap && !reduce) {
-    btnWrap.addEventListener("mouseenter", () => { hovering = true; pxKick(); });
-    btnWrap.addEventListener("mouseleave", () => { hovering = false; pxKick(); });
+    btnWrap.addEventListener("mouseenter", () => { hovering = true; hot(true); pxKick(); });
+    btnWrap.addEventListener("mouseleave", () => { hovering = false; hot(false); pxKick(); });
     if (btn) {
-      btn.addEventListener("focus", () => { hovering = true; pxKick(); });
-      btn.addEventListener("blur", () => { hovering = false; pxKick(); });
+      btn.addEventListener("focus", () => { hovering = true; hot(true); pxKick(); });
+      btn.addEventListener("blur", () => { hovering = false; hot(false); pxKick(); });
     }
   }
 
@@ -893,6 +1241,12 @@
     btnWrap.classList.remove("firing"); void btnWrap.offsetWidth;
     btnWrap.classList.add("firing");
     lvl = 1;                                  // same field, driven all the way up
+    const r = btnWrap.getBoundingClientRect();
+    const B = parseFloat(getComputedStyle(pxCv).getPropertyValue("--px-bleed")) || 0;
+    if (r.width && B) {
+      buildTraces(r.width, r.height, B);
+      traceEnd = performance.now() + T_OUT + T_HOLD + T_BACK + 90;   // + the last delay
+    }
     pxKick();
   }
 
@@ -904,7 +1258,13 @@
     const onField = () => {
       const has = pw.value.length > 0;
       setArm(has ? 1 : 0);
-      if (!has && form.classList.contains("denied")) { resetDetector(); setState("out"); }
+      if (!has && form.classList.contains("denied")) { resetDetector(); setState("out"); return; }
+      // quiescent <-> typing, but never over a verdict that is still on screen
+      if (!form.classList.contains("open") && !form.classList.contains("denied")
+          && !form.classList.contains("busy")) {
+        form.classList.toggle("typing", has);
+        lightDiagram();
+      }
     };
     pw.addEventListener("input", onField);
   }

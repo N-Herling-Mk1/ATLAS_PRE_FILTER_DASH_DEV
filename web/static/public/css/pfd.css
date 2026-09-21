@@ -35,7 +35,29 @@
 }
 
 * { box-sizing: border-box; }
+
+/* ---- HOUSE RULE: the page is exactly the viewport ------------------------
+   Every sheet in this app is one screen. The document never scrolls; a region
+   that needs to scroll says so, and scrolls inside its own box.
+
+   Three things make that work, and all three are needed:
+
+     1. the shell is a FIXED height, not a min-height. A min-height lets content
+        push the page taller, which is the scrollbar you are trying to remove.
+     2. every flex/grid child in the chain carries min-height: 0. Without it a
+        child refuses to shrink below its content and forces the parent to
+        grow -- the most common cause of an unexpected scrollbar by a distance.
+     3. 100dvh, not 100vh. On mobile 100vh is the viewport WITHOUT the browser
+        chrome currently on screen, so a 100vh page is taller than what you can
+        see. 100vh stays first as the fallback for older engines.
+
+   For a new page: give its root `height: 100%; min-height: 0`, put the
+   scrolling region behind `overflow: auto`, and put `min-height: 0` on every
+   box between the two. Do not put a min-height in viewport units anywhere.
+   The narrow breakpoint at the bottom of this file deliberately hands scrolling
+   back to the document -- a phone cannot honour this and should not try. */
 html, body { margin: 0; height: 100%; }
+body { overflow: hidden; }
 body {
   font-family: var(--mono); font-size: 14px; line-height: 1.45; color: var(--ink);
   background: var(--void);
@@ -48,7 +70,9 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 
 /* ---------------------------------------------------------------- sheet -- */
 .sheet {
-  position: relative; min-height: calc(100vh - 20px); margin: 10px;
+  position: relative; margin: 10px;
+  height: calc(100vh - 20px); height: calc(100dvh - 20px);
+  display: flex; flex-direction: column; overflow: hidden;
   background:
     radial-gradient(1200px 500px at 50% 115%, rgba(30, 136, 216, .10), transparent 70%),
     linear-gradient(rgba(255, 255, 255, .028) 1px, transparent 1px) 0 0 / 24px 24px,
@@ -70,7 +94,11 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .zone.z4 { left: 50%; } .zone.z5 { left: 62.5%; } .zone.z6 { left: 75%; } .zone.z7 { left: 87.5%; }
 .zone.y0 { top: 0%; } .zone.y1 { top: 25%; } .zone.y2 { top: 50%; } .zone.y3 { top: 75%; }
 
-.frame { display: grid; grid-template-columns: 196px 1fr; gap: 22px; align-items: start; }
+.frame { display: grid; grid-template-columns: 196px 1fr; gap: 22px; align-items: stretch;
+  flex: 1 1 auto; min-height: 0; }
+/* the designated scrollers: everything else in the chain stays put */
+.frame > main { min-height: 0; overflow: auto; }
+nav.plates { min-height: 0; overflow: auto; }
 
 /* --------------------------------------------------------------- nav ----- */
 nav.plates { position: sticky; top: 16px; border: 1px solid var(--rule-hi); background: var(--steel); }
@@ -208,7 +236,11 @@ canvas.chart.box { height: 190px; }
 #idle { position: fixed; left: 50%; top: 14px; transform: translateX(-50%); z-index: 20; }
 
 @media (max-width: 900px) {
+  /* a phone cannot fit a console on one screen; give scrolling back */
+  body { overflow: auto; }
+  .sheet { height: auto; min-height: calc(100dvh - 20px); display: block; }
   .frame { grid-template-columns: 1fr; }
+  .frame > main, nav.plates { overflow: visible; }
   nav.plates { position: static; }
   .nets { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .titleblock { position: static; margin-top: 20px; width: auto; }

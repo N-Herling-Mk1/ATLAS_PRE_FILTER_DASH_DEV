@@ -29,6 +29,7 @@ TILES = [
     ("forge", "Forge", "forge", "The posterior observatory and its runs."),
     ("features", "Features", "X", "The feature set itself: definitions, coverage, drift."),
     ("models", "Models", "f(X)", "Trained models, their inputs, and their verdicts."),
+    ("eda", "EDA Dashboard", "EDA", "Distributions, correlations and coverage across the prefilter inputs."),
 ]
 
 # Images the TV will not show: these are user-interface assets that happen to
