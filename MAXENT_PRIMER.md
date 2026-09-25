@@ -237,3 +237,89 @@ Two moments see almost nothing; the right constraint set sees nearly all of it.
   multivariate Gaussian, so the S/B likelihood ratio is QDA — the same object as
   the Σ_S − Σ_B correlation pass;
 - named-family selection beyond the MaxEnt ladder.
+
+---
+
+## 8. Further reading
+
+**If you read only three:**
+1. Jaynes (1957) for the idea.
+2. Cover & Thomas, Ch. 12, for the mathematics.
+3. Wu (2003) for the algorithm this repo implements.
+
+### Foundations: why MaxEnt at all
+
+- **E. T. Jaynes, "Information Theory and Statistical Mechanics," *Phys. Rev.* 106, 620 (1957).**
+  The founding paper. Short, readable; start here.
+- **E. T. Jaynes, *Probability Theory: The Logic of Science* (Cambridge, 2003).**
+  Ch. 11–12 build the entropy principle from the ground up. Opinionated, which
+  helps.
+  PDF: <https://jhanley.biostat.mcgill.ca/bios601/GaussianModel/JaynesProbabilityTheory.pdf>
+- **J. Shore & R. Johnson, "Axiomatic derivation of the principle of maximum
+  entropy and the principle of minimum cross-entropy," *IEEE Trans. Inf. Theory*
+  26(1) (1980).**
+  Shows entropy is the only consistent functional for this job, not one
+  arbitrary choice among several. It is also why "left out" (§4) is a
+  cross-entropy.
+
+### The mathematics, one step past Stone
+
+- **T. Cover & J. Thomas, *Elements of Information Theory*, 2nd ed. (Wiley, 2006).**
+  Ch. 8 covers differential entropy; Ch. 12 is Maximum Entropy. The natural
+  next book after Stone's tutorial.
+- **J. N. Kapur, *Maximum-Entropy Models in Science and Engineering* (Wiley, 1989).**
+  A catalogue of which constraints on which support give which distribution:
+  the §1 table, extended to many more cases.
+
+### Computing MaxEnt densities (what `engine/maxent.py` does)
+
+- **L. Mead & N. Papanicolaou, "Maximum entropy in the problem of moments,"
+  *J. Math. Phys.* 25, 2404 (1984).**
+  The dual/Newton approach, and when moment problems are well-posed.
+- **X. Wu, "Calculation of maximum entropy densities with application to income
+  distribution," *J. Econometrics* 115, 347 (2003).**
+  A practical algorithm that adds moments one rung at a time. The closest paper
+  to this repo's ladder.
+- **A. Zellner & R. Highfield, "Calculation of maximum entropy distributions and
+  approximation of marginal posterior distributions," *J. Econometrics* 37 (1988).**
+  An early, clear treatment of numerical fits.
+
+### Exponential families: the general frame
+
+- **M. Wainwright & M. Jordan, *Graphical Models, Exponential Families, and
+  Variational Inference* (Foundations and Trends in ML, 2008), Ch. 3.**
+  The MaxEnt ↔ exponential-family duality, stated properly. The road to joint
+  MaxEnt (§7, next).
+- **I. Csiszár & P. Shields, *Information Theory and Statistics: A Tutorial*
+  (Now Publishers, 2004).**
+  The geometry of I-divergence, and why MaxEnt fits are projections.
+
+### Choosing the rung
+
+- **R. Kass & A. Raftery, "Bayes Factors," *JASA* 90, 773 (1995).**
+  The source of the ΔBIC scale (0–2 / 2–6 / 6–10 / > 10) used in the plan.
+- **K. Burnham & D. Anderson, *Model Selection and Multimodel Inference*, 2nd ed.
+  (Springer, 2002).**
+  How to read AIC, and what "several models within Δ 2" means. The basis of
+  the "not identified" flag.
+
+### The special cases this repo hits
+
+- **G. Shmueli et al., "A useful distribution for fitting discrete data: revival
+  of the Conway–Maxwell–Poisson distribution," *JRSS C* 54 (2005).**
+  The COM-Poisson rung.
+- **D. Lambert, "Zero-inflated Poisson regression," *Technometrics* 34 (1992).**
+  The inflation rung.
+- **J. Mullahy, "Specification and testing of some modified count data models,"
+  *J. Econometrics* 33 (1986).**
+  The hurdle.
+
+### Physics-side perspective
+
+- **S. Pressé et al., "Principles of maximum entropy and maximum caliber in
+  statistical physics," *Rev. Mod. Phys.* 85, 1115 (2013).**
+  A modern review that clears up common misreadings.
+- **D. Sivia & J. Skilling, *Data Analysis: A Bayesian Tutorial*, 2nd ed. (Oxford, 2006).**
+  A MaxEnt chapter from people who used it on real measurement problems.
+- **A. Caticha, *Entropic Inference and the Foundations of Physics* (2012).**
+  Free online. The most principled treatment of MaxEnt as updating.
