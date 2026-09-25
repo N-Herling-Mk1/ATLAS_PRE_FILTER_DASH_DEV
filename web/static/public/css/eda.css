@@ -1,0 +1,161 @@
+/* eda.css -- the EDA sheet on the hub (mk45, mk46: MaxEnt line, search, enlarged view). Loaded after pfd.css and hub.css.
+
+   One loud thing: the input-file manifest. File names in the mono face and the
+   column count as a large display numeral, so "what went in, and how wide is
+   it" reads before anything else. Everything under it is quiet: white plot
+   plates (the site's rule for plots), small tabular numbers.
+
+   Class colours follow charts.js: background grey fill, signal pink step. */
+
+.eda { display: grid; gap: 18px; padding-bottom: 24px; }
+.eda h4 { margin: 0; font-family: var(--display); font-size: 14px; letter-spacing: .06em;
+  color: #fff; font-weight: 700; }
+
+/* ------------------------------------------------------------ manifest -- */
+.eda-files { display: grid; gap: 10px; }
+.eda-files-head { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
+.eda-files-head .muted { overflow-wrap: anywhere; }
+.eda-manifest { display: grid; gap: 12px; }
+.mf-row { display: grid; gap: 6px; border-left: 2px solid var(--rule-hi); padding-left: 12px; }
+.mf-row.on { border-left-color: var(--accent); }
+.mf-head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.mf-region { font-family: var(--display); font-size: 13px; font-weight: 700; color: var(--ink);
+  letter-spacing: .05em; }
+.mf-row.on .mf-region { color: var(--accent); }
+.mf-union { font-size: 12px; color: var(--ink-2); }
+.mf-strip { display: grid; gap: 6px; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
+.mf-file { background: var(--steel-2); border: 1px solid var(--rule); padding: 10px 12px 11px;
+  display: grid; gap: 4px; align-content: start; min-width: 0; }
+.mf-file.missing { background: var(--steel); border-style: dashed; border-color: rgba(227, 38, 46, .45); }
+.mf-sample { font-size: 11px; color: var(--ink-2); }
+.mf-name { font-family: var(--mono); font-size: 15px; color: #fff; overflow-wrap: anywhere; }
+.mf-cols { display: flex; align-items: baseline; gap: 7px; margin-top: 2px; }
+.mf-cols b { font-family: var(--display); font-size: 30px; font-weight: 800; line-height: 1;
+  color: var(--cyan); font-variant-numeric: tabular-nums; }
+.mf-file.missing .mf-cols b { color: var(--drop); }
+.mf-cols span { font-size: 12px; color: var(--ink-2); }
+.mf-meta { font-size: 12px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.mf-warn { font-size: 11.5px; color: var(--ember); cursor: help; }
+.mf-nn .mf-cols b { color: var(--ink); font-size: 22px; }
+
+/* ----------------------------------------------------------------- run -- */
+.eda-run { display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+  border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); padding: 12px 0; }
+.eda-region { display: inline-flex; border: 1px solid var(--rule-hi); }
+.eda-region button { border: 0; border-radius: 0; padding: 7px 14px; background: transparent;
+  color: var(--ink-2); box-shadow: none; }
+.eda-region button + button { border-left: 1px solid var(--rule-hi); }
+.eda-region button[aria-checked="true"] { background: var(--rule-hi); color: #fff; }
+.eda-smoke { display: inline-flex; gap: 6px; align-items: center; }
+.eda-prog { flex: 1 1 240px; min-width: 200px; }
+.eda-prog:empty { display: none; }
+
+/* ------------------------------------------------------------- summary -- */
+.eda-results { display: grid; gap: 14px; }
+.eda-results[hidden] { display: none; }
+.eda-summary { display: flex; flex-wrap: wrap; gap: 8px 26px; align-items: baseline; }
+.sm-cell { display: grid; }
+.sm-cell b { font-family: var(--display); font-size: 20px; color: #fff; font-variant-numeric: tabular-nums; }
+.sm-cell span { font-size: 11.5px; color: var(--ink-2); }
+.sm-note { flex-basis: 100%; margin: 0; }
+
+.eda-tools { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; }
+.eda-tools input[type=search] { min-width: 300px; }
+.eda-search { display: inline-flex; gap: 8px; align-items: center; }
+.eda-tools label { display: inline-flex; gap: 6px; align-items: center; }
+.eda-key { display: inline-flex; gap: 6px; align-items: center; color: var(--ink-2); margin-left: auto; }
+.eda-key i, .st td.cls i { display: inline-block; width: 10px; height: 10px; vertical-align: -1px; }
+.eda-key { gap: 14px; }
+.eda-key i { margin-right: 6px; }
+.k-bkg { background: #8C95A5; }
+.k-sig { background: #FF2D6B; }
+
+.eda-legend { border: 1px solid var(--rule); padding: 8px 12px; color: var(--ink-2); max-width: 90ch; }
+.eda-legend summary { cursor: pointer; color: var(--ink); }
+.eda-legend dl { display: grid; grid-template-columns: max-content 1fr; gap: 6px 14px; margin: 10px 0 2px; }
+.eda-legend dt { color: var(--ink); font-family: var(--mono); }
+.eda-legend dd { margin: 0; line-height: 1.5; }
+
+/* ---------------------------------------------------------------- grid -- */
+/* mk46: the section is full width now, so the grid takes four columns at 1600 px */
+.eda-grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); }
+.eda-grid:empty { display: none; }
+.eda-grid[hidden], .eda-tools[hidden], .eda-legend[hidden], .eda-summary[hidden] { display: none; }
+.pc { background: var(--steel); border: 1px solid var(--rule); padding: 10px; display: grid;
+  gap: 8px; align-content: start; min-width: 0; }
+.pc[hidden] { display: none; }
+.pc-head { display: flex; align-items: baseline; gap: 10px; min-width: 0; }
+.pc-head h5 { margin: 0; font-family: var(--mono); font-size: 13px; font-weight: normal; color: #fff;
+  overflow-wrap: anywhere; min-width: 0; }
+.pc-type { margin-left: auto; font-size: 11px; color: var(--ink-2); white-space: nowrap; }
+canvas.pc-plot { width: 100%; height: 200px; display: block; background: var(--plate); }
+.pc-tails { margin: 0; }
+.warn-ink { color: var(--ember); }
+
+.st { font-size: 12px; }
+.st th, .st td { padding: 2px 6px; }
+.st td.cls { white-space: nowrap; color: var(--ink); }
+.st td.cls i { margin-right: 6px; }
+
+.me { display: grid; gap: 3px; font-size: 12px; border-top: 1px solid var(--rule); padding-top: 6px; }
+.me-row { display: flex; flex-wrap: wrap; gap: 2px 14px; align-items: baseline; }
+.me-k { width: 78px; color: var(--ink-2); flex: none; }
+.me-v { font-variant-numeric: tabular-nums; color: var(--ink); }
+.me-v em { font-style: normal; color: var(--meta); font-family: var(--mono); }
+.me-v.hot { color: var(--pass); }
+
+@media (max-width: 700px) {
+  .eda-grid { grid-template-columns: minmax(0, 1fr); }
+  .eda-key { margin-left: 0; }
+  .mf-cols b { font-size: 24px; }
+}
+.me-v.flag { color: var(--drop); }
+
+/* ----------------------------------------------------- mk46: cards -- */
+canvas.pc-plot { cursor: zoom-in; }
+.pc-open { margin-left: 8px; padding: 2px 8px; font-size: 11px; border-radius: 5px; flex: none; }
+.pc-type { margin-left: auto; }
+.me-row.me-case .me-v:first-of-type { color: #fff; }
+.me-k:empty { visibility: hidden; }
+
+/* ------------------------------------------- mk46: the enlarged view -- */
+.eda-focus { display: grid; gap: 14px; }
+.eda-focus[hidden] { display: none; }
+.fx-head { display: flex; align-items: center; gap: 16px; border-bottom: 1px solid var(--rule); padding-bottom: 10px; }
+.fx-back { border-radius: 6px; color: var(--accent); border-color: var(--accent); background: transparent; }
+.fx-back:hover { background: rgba(255, 154, 31, .12); }
+.fx-title { display: grid; min-width: 0; }
+.fx-title h4 { font-family: var(--mono); font-weight: normal; font-size: 18px; letter-spacing: 0;
+  overflow-wrap: anywhere; }
+.fx-step { margin-left: auto; display: inline-flex; align-items: center; gap: 8px; }
+.fx-step button { width: 36px; height: 32px; padding: 0; font-size: 18px; border-radius: 6px; }
+.fx-load:empty { display: none; }
+.fx-case { font-family: var(--display); font-size: 13px; letter-spacing: .03em; color: var(--cyan); }
+.fx-read { margin: 0; padding: 0 0 0 18px; display: grid; gap: 5px; max-width: 110ch;
+  font-size: 13px; line-height: 1.55; color: var(--ink); }
+.fx-read li.warn { color: var(--ember); }
+.fx-read li.flag { color: var(--drop); }
+.fx-read li.good { color: #7FE6B4; }
+
+.fx-panels { display: grid; gap: 14px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.fx-panel { margin: 0; background: var(--steel); border: 1px solid var(--rule); padding: 10px 12px 8px;
+  display: grid; gap: 6px; align-content: start; min-width: 0; }
+.fx-panel figcaption { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; font-size: 13px; }
+.fx-panel figcaption b { font-family: var(--display); font-size: 12px; letter-spacing: .04em; color: #fff; }
+.fx-panel figcaption label { display: inline-flex; gap: 6px; align-items: center; margin-left: auto; }
+canvas.fx-plot { width: 100%; height: 280px; display: block; background: var(--plate); }
+canvas.fx-plot.half { height: 136px; }
+.fx-leg { margin: 0; color: var(--ink-2); line-height: 1.5; }
+.fx-rungs { display: inline-flex; flex-wrap: wrap; gap: 4px; margin-left: auto; }
+.fx-rung { padding: 2px 8px; font-size: 11px; border-radius: 5px; }
+.fx-rung[aria-pressed="true"] { background: var(--rule-hi); color: #fff; border-color: var(--cyan); }
+
+.fx-tables { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); align-items: start; }
+.fx-tables h5 { margin: 0 0 6px; font-family: var(--display); font-size: 12px; letter-spacing: .04em; color: #fff; font-weight: 700; }
+.fx-tables p { margin: 6px 0 0; }
+.st.lad tr.best td { color: #fff; font-weight: bold; }
+.st.lad tr.near td:first-child::after { content: "  \2248"; color: var(--ember); }
+
+@media (max-width: 1100px) { .fx-panels { grid-template-columns: minmax(0, 1fr); } }
+.fx-key { display: inline-flex; align-items: center; gap: 5px; margin-right: 14px; }
+.fx-key i { display: inline-block; width: 12px; height: 3px; }

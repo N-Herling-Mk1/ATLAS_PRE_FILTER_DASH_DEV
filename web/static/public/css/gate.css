@@ -261,24 +261,37 @@ body.gate.probing { cursor: crosshair; }
   text-shadow: 0 1px 2px rgba(0, 0, 0, .85), 0 0 14px var(--st-glow);
   box-shadow: 0 0 22px -2px var(--st-soft), inset 0 0 26px -14px var(--st);
   position: relative; z-index: 1;          /* over the diagram, see below */
-  transition: background .22s ease, color .22s ease, box-shadow .25s ease,
-              border-color .25s ease, text-shadow .25s ease, padding-right .22s ease; }
-/* Hover is a different object, not a brighter one: the card goes white, the
-   label goes University navy and moves to the RIGHT, and the left of the face
-   is handed to the diagram. Because the two now occupy different halves, they
-   cannot overlap -- which is a layout fix, not a stacking one, and is why the
-   canvas can sit back above the button (see .btn-px). */
-.plate-body button.primary:hover {
-  background: #FFFFFF;
-  background-color: #FFFFFF;
-  color: #0C234B;
-  border-color: #0C234B;
-  text-align: right;
-  padding-right: clamp(20px, 7%, 46px);
-  text-shadow: none;
-  box-shadow: 0 0 44px -4px var(--st-glow), 0 0 0 1px rgba(12, 35, 75, .25); }
-.plate-body button.primary:hover::before,
-.plate-body button.primary:hover::after { border-color: #0C234B; }
+  transition: box-shadow .25s ease, border-color .25s ease, text-shadow .25s ease; }
+/* Hover keeps the button's own blue. What changes is that the two LLP
+   diagrams fade in either side of the label -- the label stays centred, the
+   diagrams take the outer thirds, so nothing ever sits on top of the word.
+   The halo lifts a little; the colour does not move. */
+/* Hover must restate the background, not just the shadows. pfd.css has
+     button.primary:hover:not(:disabled) { background: #FFB04D }
+   and :not(:disabled) scores as a class, so that is (0,3,1) against the
+   resting rule's (0,2,1) -- on hover it wins, and a hover rule that only sets
+   shadows lets the orange straight through. Matching the same pseudo-classes
+   here makes this (0,4,1): it wins on specificity, not on load order. */
+.plate-body button.primary:hover,
+.plate-body button.primary:hover:not(:disabled) {
+  background: linear-gradient(180deg, rgba(var(--st-rgb), .20), rgba(var(--st-rgb), .34));
+  background-color: rgba(var(--st-rgb), .26);
+  border-color: var(--st);
+  color: var(--st-ink);
+  box-shadow: 0 0 40px 0 var(--st-glow), inset 0 0 30px -10px var(--st);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, .85), 0 0 18px var(--st-glow); }
+
+/* Disabled means "already sent" here, not "unavailable": the button is
+   disabled for exactly the checking window in which the diagrams flash and
+   hold. pfd.css dims every disabled button to .4, which would fade the button
+   out underneath them. Still unclickable -- disabled is what stops a double
+   submit -- it just stays lit, with a progress cursor to say why. */
+.plate-body button.primary:disabled {
+  opacity: 1; cursor: progress;
+  background: linear-gradient(180deg, rgba(var(--st-rgb), .20), rgba(var(--st-rgb), .34));
+  background-color: rgba(var(--st-rgb), .26);
+  border-color: var(--st);
+  color: var(--st-ink); }
 .plate-body button.primary:active { box-shadow: 0 0 16px -4px var(--st-soft), inset 0 3px 10px rgba(0, 0, 0, .5); }
 /* the side caps, straight off the splash button */
 .btn-wrap { --cap: 9px; }

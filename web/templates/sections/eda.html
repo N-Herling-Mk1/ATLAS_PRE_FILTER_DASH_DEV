@@ -1,26 +1,143 @@
-<!-- Stub sheet: eda. Replace the body with the real sheet when it is built;
-     the wrapper, the heading and the routing are already done. -->
-<div class="stub">
-  <p class="stub-lead">Distributions, correlations and coverage across the prefilter inputs — the first look, before anything is fitted to anything.</p>
-  <h4 class="stub-h">Planned</h4>
-  <ul class="stub-plan">
-    <li>
-      <b>Distributions</b>
-      <span>per feature, signal and background overlaid</span>
-    </li>
-    <li>
-      <b>Correlations</b>
-      <span>the matrix, ordered by cluster rather than by column order</span>
-    </li>
-    <li>
-      <b>Missingness</b>
-      <span>what is absent, and whether it is absent at random</span>
-    </li>
-    <li>
-      <b>Outliers</b>
-      <span>the tails, kept rather than clipped, with counts</span>
-    </li>
-  </ul>
-  <p class="stub-note">Nothing on this sheet reads live data yet. The navigation is real;
-    the content is not.</p>
+<!-- EDA sheet, mk46 (mk45 first iteration + MaxEnt fits and the enlarged view). The plan it is built against is
+     docs/EDA_PLAN_mk1.md. Behaviour: web/static/app/js/eda.js. Everything on
+     this sheet is computed from the input files at run time (canon C4); a gap
+     reads as a dash, never as a guess. -->
+<div class="eda" id="eda">
+
+  <!-- ===== input files: names and column counts, first and largest ===== -->
+  <section class="eda-files" aria-labelledby="eda-files-h">
+    <div class="eda-files-head">
+      <h4 id="eda-files-h">Input files</h4>
+      <span class="small muted" id="eda-loc">locations file: &mdash;</span>
+    </div>
+    <div id="eda-manifest" class="eda-manifest">
+      <p class="small muted">Reading file headers&hellip;</p>
+    </div>
+  </section>
+
+  <!-- ===== run control ===== -->
+  <section class="eda-run" aria-label="Generate graphs">
+    <div class="eda-region" role="radiogroup" aria-label="Region">
+      <button type="button" role="radio" aria-checked="true" data-region="barrel">Barrel</button>
+      <button type="button" role="radio" aria-checked="false" data-region="endcap">Endcap</button>
+    </div>
+    <button type="button" class="primary" id="eda-go">Generate signal / background graphs</button>
+    <label class="small muted eda-smoke"><input type="checkbox" id="eda-smoke"> smoke (2,000 rows per file)</label>
+    <div class="eda-prog" id="eda-prog" aria-live="polite"></div>
+  </section>
+  <div id="eda-msg" class="banner hidden" role="status"></div>
+
+  <!-- ===== results ===== -->
+  <section class="eda-results" id="eda-results" hidden>
+    <div class="eda-summary" id="eda-summary"></div>
+
+    <div class="eda-tools" id="eda-tools">
+      <label class="small muted eda-search">Find a feature
+        <input type="search" id="eda-filter" list="eda-cols" placeholder="type to filter; Enter opens it"
+               aria-describedby="eda-search-hint" autocomplete="off">
+      </label>
+      <datalist id="eda-cols"></datalist>
+      <span class="small muted" id="eda-search-hint">Click any plot to enlarge it.</span>
+      <label class="small muted">Sort
+        <select id="eda-sort">
+          <option value="file">file order</option>
+          <option value="sep">separation above noise (DB minus null)</option>
+          <option value="shape">separation MaxEnt sees and Gaussian misses</option>
+          <option value="share">Gaussian moment share, lowest first</option>
+          <option value="left">background information left out, highest first</option>
+        </select>
+      </label>
+      <label class="small muted">y axis
+        <select id="eda-y">
+          <option value="auto">auto</option>
+          <option value="lin">linear</option>
+          <option value="log">log</option>
+        </select>
+      </label>
+      <label class="small muted"><input type="checkbox" id="eda-norm" checked> shape (each class normalised to 1)</label>
+      <span class="eda-key small"><span><i class="k-bkg"></i>background</span><span><i class="k-sig"></i>signal, mass points pooled</span></span>
+    </div>
+
+    <details class="eda-legend small" id="eda-legend">
+      <summary>What the numbers under each plot are</summary>
+      <dl>
+        <dt>mean, var, std</dt><dd>Per class, on valid values only: NaN, inf and sentinels
+          (&minus;999, plus any ruled on the Verdict board) are removed and counted as <em>invalid</em>.
+          Unweighted; signal is the four mass points pooled.</dd>
+        <dt>MaxEnt case</dt><dd>What the column is, and so which least-committed models are allowed:
+          binary (Bernoulli), an integer lattice (PMFs only), or a density on R, R+ or [0, 1] &mdash; with a
+          <em>hurdle</em> when one value holds 5% or more of the column, since no smooth density can put
+          weight on a single value.</dd>
+        <dt>ladder, best</dt><dd>Each case has a ladder of constraint sets (Gaussian, gamma, lognormal,
+          quartic, COM-Poisson, &hellip;). Every rung is fitted to both classes on the same rows; the best is
+          the lowest BIC. Rungs within &Delta;BIC 2 of the best are indistinguishable &mdash; the column is
+          then <em>not identified</em> at the family level.</dd>
+        <dt>left out</dt><dd>Nats of information the best fit does not carry: the data's cross-entropy under
+          the fit minus its own entropy. On the Gaussian rung this is the negentropy J.</dd>
+        <dt>captures</dt><dd>Bhattacharyya distance between the S and B best fits, as a share of the
+          histogram distance. Next to it, the same share for the Gaussian pair: when MaxEnt captures much
+          more than the Gaussian, the separation lives in shape.</dd>
+        <dt>Gaussian ref</dt><dd>J = H<sub>G</sub> &minus; H per class: how far each class is from the
+          Gaussian at its own variance.</dd>
+        <dt>DB hist / null</dt><dd>Bhattacharyya distance between the two histograms, tails included, and
+          its mean over 20 label permutations &mdash; the level noise alone reaches. Compare against the
+          null, not zero. Disjoint supports are flagged as a leakage signature.</dd>
+        <dt>discrete</dt><dd>Counts and flags get lattice fits only: a Gaussian is a density and these are PMFs.</dd>
+      </dl>
+    </details>
+
+    <div class="eda-grid" id="eda-grid"></div>
+    <p class="small muted" id="eda-skipped"></p>
+
+    <!-- ===== one feature, enlarged: replaces the grid; Esc or the button returns ===== -->
+    <section class="eda-focus" id="eda-focus" hidden aria-labelledby="fx-name">
+      <div class="fx-head">
+        <button type="button" class="fx-back" id="fx-back">&larr; All graphs</button>
+        <div class="fx-title">
+          <h4 id="fx-name">&mdash;</h4>
+          <span class="small muted" id="fx-type"></span>
+        </div>
+        <div class="fx-step">
+          <button type="button" id="fx-prev" aria-label="Previous feature">&lsaquo;</button>
+          <span class="small muted" id="fx-pos"></span>
+          <button type="button" id="fx-next" aria-label="Next feature">&rsaquo;</button>
+        </div>
+      </div>
+      <div class="fx-load small muted" id="fx-load" aria-live="polite"></div>
+
+      <div class="fx-case" id="fx-case"></div>
+      <ul class="fx-read" id="fx-read"></ul>
+
+      <div class="fx-panels">
+        <figure class="fx-panel">
+          <figcaption><b>Signal / background</b>
+            <label class="small muted"><input type="checkbox" id="fx-mass"> split signal by mass point</label></figcaption>
+          <canvas class="fx-plot" id="fx-c1" role="img" aria-label="Signal and background histograms"></canvas>
+          <p class="fx-leg small" id="fx-l1"></p>
+        </figure>
+        <figure class="fx-panel">
+          <figcaption><b>MaxEnt fit per class</b><span class="fx-rungs" id="fx-rungs" role="group" aria-label="Rung to draw"></span></figcaption>
+          <canvas class="fx-plot half" id="fx-c2b" role="img" aria-label="Background histogram with MaxEnt fits"></canvas>
+          <canvas class="fx-plot half" id="fx-c2s" role="img" aria-label="Signal histogram with MaxEnt fits"></canvas>
+          <p class="fx-leg small" id="fx-l2"></p>
+        </figure>
+        <figure class="fx-panel">
+          <figcaption><b>Log-likelihood ratio, ln p<sub>S</sub> / p<sub>B</sub></b></figcaption>
+          <canvas class="fx-plot" id="fx-c3" role="img" aria-label="Log-likelihood ratio"></canvas>
+          <p class="fx-leg small" id="fx-l3"></p>
+        </figure>
+        <figure class="fx-panel">
+          <figcaption><b>Cumulative distributions</b></figcaption>
+          <canvas class="fx-plot" id="fx-c4" role="img" aria-label="Cumulative distributions"></canvas>
+          <p class="fx-leg small" id="fx-l4"></p>
+        </figure>
+      </div>
+
+      <div class="fx-tables">
+        <div><h5>MaxEnt ladder &mdash; background</h5><div id="fx-lad-b"></div></div>
+        <div><h5>MaxEnt ladder &mdash; signal</h5><div id="fx-lad-s"></div></div>
+        <div><h5>Descriptive statistics</h5><div id="fx-desc"></div></div>
+      </div>
+    </section>
+  </section>
 </div>

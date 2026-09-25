@@ -369,6 +369,14 @@ body[data-page="hub"] { display: flow-root; }
   color: var(--accent); text-transform: uppercase; border: 1px solid var(--rule-hi);
   padding: 6px 9px; white-space: nowrap; }
 .screen-body { overflow: auto; min-height: 0; }
+/* mk45: the section sheets share the page's `.sheet` class, so they inherited the
+   whole page frame -- full height, border, grid, 190 px of padding -- and its
+   display:flex beat the `hidden` attribute, so every stub rendered at once and
+   the first one (Information Theory) sat on top whichever section was opened.
+   Reset here with an id so it outranks body[data-page="hub"] .sheet (0,2,1). */
+#screen-body > .sheet { position: static; margin: 0; height: auto; min-height: 0; display: block;
+  overflow: visible; background: none; border: 0; outline: 0; padding: 0; }
+#screen-body > .sheet[hidden] { display: none; }
 /* ------------------------------------------------------------ stub sheet -- */
 .stub { max-width: 78ch; display: grid; gap: 16px; }
 .stub-lead { margin: 0; font-size: 14px; line-height: 1.6; color: var(--ink); }
@@ -384,6 +392,74 @@ body[data-page="hub"] { display: flow-root; }
   border-left: 2px solid var(--rule-hi); padding-left: 11px; }
 .sheet-fallback { font-size: 12.5px; color: var(--ink-2); }
 .sheet-fallback code { font-family: var(--mono); color: var(--accent); }
+
+/* ================================================== mk46: section view --
+   With a section open, the rail and the band fold into one top bar:
+
+       [ TV ½ ][ section cards as a switcher ............ ][ nav ]
+       [ the section, full width ................................ ]
+
+   .rail becomes display:contents so its panels are placed on the hub's own
+   grid; the dock goes (the deck stays on the landing view). The landing view
+   (data-state="deck") is untouched. Every selector here carries
+   [data-state="screen"], so nothing leaks into the deck view. */
+/* the dock existed for the deck to park in; mk46 section view does not park it,
+   so the panel goes on the landing view too and the rail is TV over nav */
+.rail-dock { display: none; }
+.rail { grid-template-rows: auto auto; align-content: start; }
+.rn-foot { display: flex; gap: 8px; align-items: stretch; margin-top: 10px; }
+.rn-foot .rn-out { margin: 0; flex: 1 1 auto; }
+.rn-home { display: none; }
+
+.hub[data-state="screen"] {
+  grid-template-columns: 128px minmax(0, 1fr) minmax(300px, 25vw);
+  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-areas: "tv band nav" "stage stage stage"; }
+.hub[data-state="screen"] .rail { display: contents; }
+.hub[data-state="screen"] .rail-dock { display: none; }
+.hub[data-state="screen"] .rail-tv { grid-area: tv; padding: 5px; cursor: pointer; align-self: stretch;
+  display: grid; grid-template-rows: minmax(0, 1fr) auto; }
+.hub[data-state="screen"] .rail-tv:hover { border-color: var(--cyan); }
+.hub[data-state="screen"] .rail-tv .tv { height: 100%; display: grid; grid-template-rows: minmax(0, 1fr) auto; }
+.hub[data-state="screen"] .rail-tv .tv-screen { aspect-ratio: auto; min-height: 58px; }
+.hub[data-state="screen"] .tv-osd { font-size: 8px; letter-spacing: .08em; left: 4px; right: 4px; bottom: 3px; }
+.hub[data-state="screen"] .tv-bezel { padding: 3px 6px; gap: 5px; }
+.hub[data-state="screen"] .tv-tag, .hub[data-state="screen"] .tv-count { display: none; }
+.hub[data-state="screen"] .tv-bezel::after { content: "Home"; font-family: var(--mono); font-size: 10px;
+  color: var(--ink-2); }
+
+.hub[data-state="screen"] .band { grid-area: band; padding-top: 10px; padding-bottom: 10px; }
+.hub[data-state="screen"] #band-hint { display: none; }
+.hub[data-state="screen"] .cards { margin-top: 8px; gap: 6px; padding-bottom: 4px;
+  grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); }
+.hub[data-state="screen"] .card { min-height: 44px; padding: 5px 9px; gap: 2px; border-radius: 8px;
+  align-content: center; transform: none; }
+.hub[data-state="screen"] .card-glyph { font-size: 9px; }
+.hub[data-state="screen"] .card-name { font-size: 11.5px; white-space: nowrap; overflow: hidden;
+  text-overflow: ellipsis; }
+.hub[data-state="screen"] .card[aria-selected="true"]::before { bottom: -5px; }
+
+/* two rows: page links, then Home / Sign out / sound. The panel headings go:
+   in a 90 px bar they cost a row each and say nothing the controls do not. */
+.hub[data-state="screen"] .band-head, .hub[data-state="screen"] .rn-head h2 { display: none; }
+.hub[data-state="screen"] .band { display: grid; align-content: center; }
+.hub[data-state="screen"] .cards { margin-top: 0; }
+.hub[data-state="screen"] .rail-nav { grid-area: nav; padding-top: 10px; padding-bottom: 10px;
+  display: flex; flex-wrap: wrap; align-content: center; gap: 7px; }
+.hub[data-state="screen"] .rn-links { order: 1; flex-basis: 100%; display: flex; flex-wrap: wrap; gap: 5px; margin: 0; }
+.hub[data-state="screen"] .rn-foot { order: 2; flex: 1 1 auto; margin: 0; }
+.hub[data-state="screen"] .rn-head { order: 3; margin: 0; padding: 0; border: 0; }
+.hub[data-state="screen"] .rn-links a { padding: 3px 8px; font-size: 11px; }
+.hub[data-state="screen"] .rn-home { display: block; border-radius: 7px; font-family: var(--display);
+  font-size: 11px; letter-spacing: .08em; color: var(--accent); border-color: var(--accent); background: transparent; }
+.hub[data-state="screen"] .rn-home:hover { background: rgba(255, 154, 31, .12); color: #fff; }
+.hub[data-state="screen"] .stage { grid-area: stage; }
+
+@media (max-width: 1100px) {
+  .hub[data-state="screen"] { grid-template-columns: 110px minmax(0, 1fr);
+    grid-template-areas: "tv nav" "band band" "stage stage"; height: 100%; }
+  .hub[data-state="screen"] .cards { grid-auto-flow: row; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
 
 /* short screens: tighten the rail so TV + nav + dock fit the height */
 @media (max-height: 860px) {

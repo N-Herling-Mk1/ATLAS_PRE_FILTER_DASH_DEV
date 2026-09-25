@@ -1,11 +1,12 @@
 {% extends "base.html" %}
-{% block head %}<link rel="stylesheet" href="/static/public/css/hub.css">{% endblock %}
+{% block head %}<link rel="stylesheet" href="/static/public/css/hub.css">
+<link rel="stylesheet" href="/static/public/css/eda.css">{% endblock %}
 {% block main %}
 <div class="hub" id="hub" data-state="deck">
 
   <!-- ===== the rail: TV, nav, dock. Never moves. ===== -->
   <div class="rail">
-    <section class="rail-tv panel" aria-label="Display">
+    <section class="rail-tv panel" aria-label="Display" id="rail-tv">
       <div class="tv">
         <div class="tv-screen">
           <!-- the picture as three channel layers, recombined by screen blending.
@@ -52,7 +53,10 @@
         <li><a href="{{ href }}">{{ label }}</a></li>
         {% endfor %}
       </ul>
-      <form class="rn-out" method="post" action="/logout"><button type="submit">Sign out</button></form>
+      <div class="rn-foot">
+        <button type="button" class="rn-home" id="nav-home">&larr; Home</button>
+        <form class="rn-out" method="post" action="/logout"><button type="submit">Sign out</button></form>
+      </div>
     </section>
 
     <!-- dock: the deck parks here, minimised, while a section is open -->
@@ -125,7 +129,7 @@
           <h3 id="screen-name">&mdash;</h3>
           <p class="small muted" id="screen-blurb">&mdash;</p>
         </div>
-        <button type="button" class="link" id="screen-back">&larr; Back to deck</button>
+        <button type="button" class="link" id="screen-back">&larr; Home</button>
       </div>
       <div class="screen-body" id="screen-body">
         {# One stub per section, all rendered, one shown. `ignore missing` on
@@ -150,4 +154,6 @@
 <script src="/static/app/js/traces.js"></script>
 <script src="/static/app/js/btnfx.js"></script>
 <script src="/static/app/js/hub.js"></script>
+<script src="/static/app/js/charts.js"></script>
+<script src="/static/app/js/eda.js"></script>
 {% endblock %}

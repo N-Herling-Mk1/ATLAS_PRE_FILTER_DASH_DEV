@@ -181,8 +181,10 @@ def create_app(**overrides):
         return render_template("error.html", code=code, text=text), code
 
     from .api import bp as api_bp
+    from .eda_api import bp as eda_bp
     from .pages import bp as pages_bp
     app.register_blueprint(api_bp)
+    app.register_blueprint(eda_bp)
     app.register_blueprint(pages_bp)
 
     def janitor():

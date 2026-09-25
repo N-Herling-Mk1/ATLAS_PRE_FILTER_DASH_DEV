@@ -853,65 +853,34 @@
     const x = Math.sin(i * 127.1 + r * 311.7) * 43758.5453;
     return x - Math.floor(x);
   };
-  const pxTarget = () => (hovering ? HOVER_LVL : 0);
+  /* Held: once Enter is pressed the diagrams stay up for as long as the gate
+     is in a submitted state -- checking, then the verdict -- and only let go
+     when the plate returns to rest. Read straight off the plate's class, so it
+     cannot disagree with the state everything else is showing. */
+  const held = () => !!form && (form.classList.contains("busy")
+                              || form.classList.contains("open")
+                              || form.classList.contains("denied"));
+  const pxTarget = () => ((hovering || held()) ? HOVER_LVL : 0);
 
-  /* ---- the LLP diagram ------------------------------------------------
-     pp -> ZH, Z -> l+l-, H -> SS, each S long-lived and decaying at a
-     DISPLACED vertex to q qbar. This is the channel the search actually runs
-     on, drawn to match the analysis figure: three-line proton beams into a
-     production blob, a wavy Z with its lepton pair, a dashed Higgs, and the
-     two scalars as DOUBLE-dashed lines -- which is how S is drawn in the
-     paper, and the reason they are the one element not in the state colour.
+  /* ---- the two LLP diagrams -------------------------------------------
+     Left:  pp -> Phi -> s s,   each s -> f fbar      (s double-DASHED)
+     Right: pp -> H   -> chi chi, each chi -> f f f   (chi double-SOLID)
+     Both drawn in white, one in each outer third, with the label left alone in
+     the middle. Each is authored in its own unit box and mapped into its
+     region, so the two share one set of primitives and one scale rule.
 
-     Coordinates are fractions of the button and every stroke scales off
-     min(w/420, h/76), so it holds at any width. It is REVEALED, not drawn:
-     the whole diagram fades up and down on `lvl`, complete at every frame. */
-  const DIAG = {
-    blob: [0.19, 0.50],
-    zv:   [0.40, 0.16],                    // Z decay
-    hv:   [0.42, 0.64],                    // H -> SS
-    sv:   [[0.62, 0.40], [0.62, 0.86]],    // the two displaced vertices
-    lep:  [[0.55, 0.05], [0.60, 0.27]],    // l+ l-
-  };
-  /* FIT: the diagram is scaled uniformly into the left FIT of the face, which
-     leaves the rest for the label. At 0.60 the widest element lands at
-     0.88 * 0.60 = 0.53 of the width, so there is a clear 0.47 for "Sign in".
-     Ink, not the state colour: the card is white while this is visible. */
-  const FIT = 0.60;
-  const INK_LINE = "rgba(10,14,22,.92)";
-  const INK_BEAM = "rgba(10,14,22,.80)";
-  const INK_S    = "rgba(10,14,22,.95)";      // still double-dashed, so still S
-  const INK_BLOB = "rgba(120,132,150,.95)";
+     Both read LEFT TO RIGHT. Mirroring the right one to point outward would
+     look symmetrical, but it reverses the time axis of a Feynman diagram --
+     the incoming protons would sit on the far right -- and anyone who reads
+     these would see it as wrong.
 
-  function tintRGB() {
-    if (!form) return "190,214,255";
-    const raw = getComputedStyle(form).getPropertyValue("--st").trim();
-    if (raw === diagFrom) return diagTo;
-    diagFrom = raw;
-    let rgb = null;
-    let m = raw.match(/^#([0-9a-f]{6})$/i);
-    if (m) rgb = [0, 2, 4].map(k => parseInt(m[1].slice(k, k + 2), 16));
-    else {
-      m = raw.match(/rgba?\(([^)]+)\)/i);
-      if (m) rgb = m[1].split(",").slice(0, 3).map(v => parseInt(v, 10));
-    }
-    diagTo = (!rgb || rgb.some(isNaN)) ? "190,214,255"
-           : rgb.map(v => Math.round(v + (255 - v) * 0.55)).join(",");
-    return diagTo;
-  }
-  let diagFrom = "", diagTo = "190,214,255";
+     Shown at `lvl`: hover fades them in, leaving fades them out, and a press
+     drives lvl past the hover level, which is spent as a flash of glow before
+     settling to a steady hold. */
+  const REGIONS = [[0.015, 0.33], [0.67, 0.985]];
+  const INK = "rgba(255,255,255,.94)";
+  const VTX = "rgba(214,222,236,.96)";
 
-  function wave(g, x1, y1, x2, y2, amp, turns) {
-    const L = Math.hypot(x2 - x1, y2 - y1);
-    const ux = (x2 - x1) / L, uy = (y2 - y1) / L, px = -uy, py = ux;
-    g.beginPath();
-    for (let i = 0; i <= 56; i++) {
-      const u = i / 56, a = Math.sin(u * turns * Math.PI * 2);
-      const X = x1 + ux * L * u + px * amp * a, Y = y1 + uy * L * u + py * amp * a;
-      if (i) g.lineTo(X, Y); else g.moveTo(X, Y);
-    }
-    g.stroke();
-  }
   function dash(g, x1, y1, x2, y2, on, off) {
     const L = Math.hypot(x2 - x1, y2 - y1);
     const ux = (x2 - x1) / L, uy = (y2 - y1) / L;
@@ -923,69 +892,77 @@
     }
     g.stroke();
   }
-  // S is a DOUBLE dashed line in the analysis figure: two rails, offset either
-  // side of the path, not one thicker dash
-  function ddash(g, x1, y1, x2, y2, on, off, sep) {
+  const seg = (g, x1, y1, x2, y2) => { g.beginPath(); g.moveTo(x1, y1); g.lineTo(x2, y2); g.stroke(); };
+  // two rails either side of the path: dashed for s, solid for chi
+  function rails(g, x1, y1, x2, y2, sep, dashed, on, off) {
     const L = Math.hypot(x2 - x1, y2 - y1);
     const px = -(y2 - y1) / L, py = (x2 - x1) / L;
-    [-sep / 2, sep / 2].forEach(o =>
-      dash(g, x1 + px * o, y1 + py * o, x2 + px * o, y2 + py * o, on, off));
+    [-sep / 2, sep / 2].forEach(o => {
+      const a = [x1 + px * o, y1 + py * o], b = [x2 + px * o, y2 + py * o];
+      if (dashed) dash(g, a[0], a[1], b[0], b[1], on, off); else seg(g, a[0], a[1], b[0], b[1]);
+    });
   }
-  const seg = (g, x1, y1, x2, y2) => { g.beginPath(); g.moveTo(x1, y1); g.lineTo(x2, y2); g.stroke(); };
+  function vtx(g, x, y, r, k) {
+    g.fillStyle = VTX; g.strokeStyle = INK; g.lineWidth = 1.1 * k;
+    g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill(); g.stroke();
+  }
+  function beams(g, X, Y, k) {
+    g.strokeStyle = INK; g.lineWidth = 1.2 * k;
+    [0.14, 0.86].forEach(b => [-0.045, 0, 0.045].forEach(o =>
+      seg(g, X(0.02), Y(b + o), X(0.20), Y(0.5 + o * 0.28))));
+  }
+
+  // pp -> Phi -> s s -> (f fbar)(f fbar)
+  function diagPhi(g, X, Y, k) {
+    beams(g, X, Y, k);
+    g.strokeStyle = INK; g.lineWidth = 1.4 * k;
+    dash(g, X(0.20), Y(0.5), X(0.47), Y(0.5), 6 * k, 4 * k);
+    g.lineWidth = 1.2 * k;
+    [0.30, 0.70].forEach(ey => rails(g, X(0.47), Y(0.5), X(0.72), Y(ey), 2.6 * k, true, 5 * k, 3.5 * k));
+    g.lineWidth = 1.3 * k;
+    [[0.30, [[0.84, 0.04], [0.96, 0.33]]], [0.70, [[0.96, 0.67], [0.84, 0.96]]]].forEach(([sy, fs]) => {
+      g.strokeStyle = INK; g.lineWidth = 1.3 * k;
+      fs.forEach(([fx, fy]) => seg(g, X(0.72), Y(sy), X(fx), Y(fy)));
+      vtx(g, X(0.72), Y(sy), 3.0 * k, k);
+    });
+    vtx(g, X(0.47), Y(0.5), 2.6 * k, k);
+    vtx(g, X(0.20), Y(0.5), 5.2 * k, k);
+  }
+
+  // pp -> H -> chi chi -> (f f f)(f f f)
+  function diagChi(g, X, Y, k) {
+    beams(g, X, Y, k);
+    g.strokeStyle = INK; g.lineWidth = 1.4 * k;
+    dash(g, X(0.20), Y(0.5), X(0.46), Y(0.5), 6 * k, 4 * k);
+    g.lineWidth = 1.2 * k;
+    [0.30, 0.70].forEach(ey => rails(g, X(0.46), Y(0.5), X(0.72), Y(ey), 2.6 * k, false));
+    [[0.30, [[0.86, 0.03], [0.97, 0.17], [0.97, 0.38]]],
+     [0.70, [[0.97, 0.62], [0.97, 0.83], [0.86, 0.97]]]].forEach(([sy, fs]) => {
+      g.strokeStyle = INK; g.lineWidth = 1.3 * k;
+      fs.forEach(([fx, fy]) => seg(g, X(0.72), Y(sy), X(fx), Y(fy)));
+      vtx(g, X(0.72), Y(sy), 3.0 * k, k);
+    });
+    vtx(g, X(0.20), Y(0.5), 5.2 * k, k);
+  }
 
   function drawDiagram(g, w, h, lvl) {
     if (lvl <= 0.02) return;
-    const k = Math.min(w / 420, h / 76);
-    const X = f => f * w, Y = f => f * h;
-    const [bx, by] = DIAG.blob, [zx, zy] = DIAG.zv, [hx, hy] = DIAG.hv;
-
-    /* The card is white on hover, so the diagram is drawn in ink rather than
-       in the state colour, and it is scaled into the LEFT of the face -- the
-       label has moved right, and the two must not collide. FIT is uniform, so
-       nothing is squashed; the stroke widths are divided by it so they come
-       out the same visual weight they had at full size. */
+    const alpha = Math.min(1, lvl / HOVER_LVL);
+    // anything above the hover level is the press: spend it as a flash
+    const flash = Math.max(0, (lvl - HOVER_LVL) / (1 - HOVER_LVL));
     g.save();
     g.lineCap = "round"; g.lineJoin = "round";
-    g.globalAlpha = Math.min(1, lvl / HOVER_LVL);
-    g.translate(0, h * (1 - FIT) / 2);
-    g.scale(FIT, FIT);
-    const kk = k / FIT;
-    g.shadowBlur = 0;
-
-    // the two proton beams, three lines each
-    g.strokeStyle = INK_BEAM; g.lineWidth = 1.5 * kk;
-    [0.15, 0.85].forEach(base => [-0.05, 0, 0.05].forEach(o =>
-      seg(g, X(0.02), Y(base + o), X(bx), Y(by + o * 0.30))));
-
-    // Z, and the lepton pair it decays to
-    g.lineWidth = 1.7 * kk;
-    wave(g, X(bx), Y(by), X(zx), Y(zy), 2.8 * kk, 4);
-    g.strokeStyle = INK_LINE; g.lineWidth = 1.6 * kk;
-    DIAG.lep.forEach(([lx, ly]) => seg(g, X(zx), Y(zy), X(lx), Y(ly)));
-
-    // the Higgs
-    g.lineWidth = 1.8 * kk;
-    dash(g, X(bx), Y(by), X(hx), Y(hy), 7 * kk, 5 * kk);
-
-    // the two long-lived scalars
-    g.strokeStyle = INK_S; g.lineWidth = 1.5 * kk;
-    DIAG.sv.forEach(([sx, sy]) => ddash(g, X(hx), Y(hy), X(sx), Y(sy), 6 * kk, 4 * kk, 2.8 * kk));
-
-    // displaced vertices, and the quark pair out of each
-    DIAG.sv.forEach(([sx, sy]) => {
-      g.strokeStyle = INK_LINE; g.lineWidth = 1.5 * kk;
-      [-0.20, 0.16].forEach(o => {
-        const ty = Math.min(0.95, Math.max(0.05, sy + o));
-        seg(g, X(sx), Y(sy), X(0.88), Y(ty));
-      });
-      g.strokeStyle = INK_LINE; g.lineWidth = 1.4 * kk;
-      g.beginPath(); g.arc(X(sx), Y(sy), 3.2 * kk, 0, Math.PI * 2); g.stroke();
+    g.globalAlpha = alpha;
+    g.shadowColor = `rgba(255,255,255,${(0.35 + 0.65 * flash).toFixed(3)})`;
+    g.shadowBlur = 3 + 22 * flash;
+    [diagPhi, diagChi].forEach((draw, n) => {
+      const [x0, x1] = REGIONS[n];
+      const rw = (x1 - x0) * w;
+      const X = f => x0 * w + f * rw;
+      const Y = f => (0.06 + f * 0.88) * h;
+      const k = Math.min(rw / 190, h / 65);
+      draw(g, X, Y, k);
     });
-
-    // the production blob last, on top of the beams that meet it
-    g.fillStyle = INK_BLOB;
-    g.strokeStyle = INK_LINE; g.lineWidth = 1.2 * kk;
-    g.beginPath(); g.arc(X(bx), Y(by), 5 * kk, 0, Math.PI * 2); g.fill(); g.stroke();
     g.restore();
   }
 

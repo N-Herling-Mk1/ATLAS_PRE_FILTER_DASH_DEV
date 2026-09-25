@@ -176,7 +176,13 @@
 
   // --------------------------------------------------------------- cards --
   cards.forEach((c, i) => {
-    c.addEventListener("click", () => { if (i !== sel) Sfx.deal(); if (open) closeSection(); setSel(i); });
+    // mk46: in section view the cards are the section switcher -- a click opens
+    // that section in place rather than closing back to the deck
+    c.addEventListener("click", () => {
+      if (i !== sel) Sfx.deal();
+      setSel(i);
+      if (open) showFace();
+    });
     c.addEventListener("dblclick", () => { setSel(i); openSection(); });
     c.addEventListener("keydown", e => {
       if (e.key === "Enter" && e.shiftKey) { setSel(i); openSection(); e.preventDefault(); }
@@ -232,26 +238,29 @@
     if (fb) fb.hidden = found;
   }
 
-  function openSection() {
-    if (open) return;
+  /* mk46 section view: the rail and the band fold into one top bar (half-size
+     TV, the cards as a switcher, the nav) and the section takes the full width.
+     The deck no longer glides into the dock -- it stays on the landing view,
+     hidden with it, and is exactly where it was when Home brings it back. */
+  function showFace() {
     const f = faces[sel];
-    // fire BEFORE the dock glide, while the face is still where the user sees it
+    if (scrName) scrName.textContent = f.name;
+    if (scrGlyph) scrGlyph.textContent = f.glyph;
+    if (scrBlurb) scrBlurb.textContent = f.blurb;
+    showSheet(f.id);
+    document.dispatchEvent(new CustomEvent("hub:open", {detail: {id: f.id, name: f.name}}));
+  }
+
+  function openSection() {
+    if (open) { showFace(); return; }
     // inward: the tracks write themselves across the panel the section is
     // opening into, rather than spraying off its edges
     trace.fire(faceRect(), {bleed: 86, inward: true});
     open = true;
     hub.dataset.state = "screen";
     if (screen) screen.hidden = false;
-    if (scrName) scrName.textContent = f.name;
-    if (scrGlyph) scrGlyph.textContent = f.glyph;
-    if (scrBlurb) scrBlurb.textContent = f.blurb;
-    showSheet(f.id);
-    if (dockEmpty) dockEmpty.hidden = true;
-    moveDeck(dock);
-    if (dock) { dock.classList.add("live"); dock.setAttribute("role", "button");
-                dock.tabIndex = 0; dock.setAttribute("aria-label", "Back to deck"); }
+    showFace();
     Sfx.dock();
-    document.dispatchEvent(new CustomEvent("hub:open", {detail: {id: f.id, name: f.name}}));
     if (back) back.focus();
   }
   function closeSection() {
@@ -259,22 +268,27 @@
     open = false;
     hub.dataset.state = "deck";
     if (screen) screen.hidden = true;
-    moveDeck(wrap, wrap && wrap.firstChild);
-    if (dock) { dock.classList.remove("live"); dock.removeAttribute("role");
-                dock.removeAttribute("tabindex"); dock.removeAttribute("aria-label"); }
-    if (dockEmpty) dockEmpty.hidden = false;
     Sfx.dock();
     document.dispatchEvent(new CustomEvent("hub:close"));
     cards[sel].focus();
   }
   if (back) back.addEventListener("click", closeSection);
+  const navHome = document.getElementById("nav-home");
+  if (navHome) navHome.addEventListener("click", closeSection);
+  // the half-size TV in the top bar is Home too
+  const railTv = document.getElementById("rail-tv");
+  if (railTv) railTv.addEventListener("click", () => { if (open) closeSection(); });
   if (dock) {
     dock.addEventListener("click", () => { if (open) closeSection(); });
     dock.addEventListener("keydown", e => {
       if (open && (e.key === "Enter" || e.key === " ")) { closeSection(); e.preventDefault(); }
     });
   }
-  document.addEventListener("keydown", e => { if (e.key === "Escape" && open) closeSection(); });
+  // Escape closes the section unless something inside it (an enlarged
+  // feature, say) handled it first and called preventDefault
+  document.addEventListener("keydown", e => {
+    if (e.key === "Escape" && open && !e.defaultPrevented) closeSection();
+  });
 
   setSel(0, true);
 
