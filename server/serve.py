@@ -5,7 +5,9 @@
     python -m server.serve --mode live      waitress on 127.0.0.1:5710 for cloudflared
 
 --home / --office / --locations pick the data locations file (else PFD_LOCATIONS).
-Every mode binds 127.0.0.1 only.
+Every mode binds 127.0.0.1, except live mode inside the container image, where
+--host (or PFD_BIND_HOST) is 0.0.0.0 so the cloudflared sidecar can reach it
+over the private compose network. Nothing is published to the host.
 """
 import argparse
 import os
@@ -35,7 +37,11 @@ def main():
     ap.add_argument("--office", action="store_true")
     ap.add_argument("--locations")
     ap.add_argument("--no-browser", action="store_true")
+    ap.add_argument("--host", default=os.environ.get("PFD_BIND_HOST", "127.0.0.1"),
+                    help="bind address; live mode only (the container sets 0.0.0.0)")
     a = ap.parse_args()
+    if a.host != "127.0.0.1" and a.mode != "live":
+        sys.exit("[serve] --host is for live mode only; dev and parity stay on loopback")
 
     from engine import loader
     from . import envfile
@@ -60,7 +66,8 @@ def main():
 
     print("=" * 72)
     print(f"  ATLAS_PRE_FILTER_DASH  mode={a.mode}")
-    print(f"  app      http://127.0.0.1:{app_port}   (loopback only)")
+    print(f"  app      http://{a.host}:{app_port}   " + ("(loopback only)" if a.host == "127.0.0.1"
+                                                       else "(container network; not published)"))
     if edge_port:
         print(f"  edge_sim {url}   <- open this one: it behaves like the hosted site")
     print(f"  store    {cfg.store_dir}")
@@ -96,7 +103,7 @@ def main():
         threading.Thread(target=srv.serve_forever, daemon=True, name="edge_sim").start()
     if not a.no_browser:
         threading.Timer(1.5, lambda: webbrowser.open(url)).start()
-    wserve(app, host="127.0.0.1", port=app_port, threads=16, ident="pfd",
+    wserve(app, host=a.host, port=app_port, threads=16, ident="pfd",
            channel_timeout=300, max_request_body_size=cfg.max_upload_mb * 1024 * 1024 + 65536)
 
 

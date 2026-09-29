@@ -25,6 +25,34 @@ class MissingInput(Exception):
     pass
 
 
+def path_map():
+    """PFD_PATH_MAP: 'FROM=>TO' pairs separated by ';'. Lets one locations file
+    (Windows paths) serve the container, where the data folder is mounted at
+    /data. Matching is case-insensitive and slash-agnostic, longest FROM first.
+
+        PFD_PATH_MAP=C:\\Users\\natha\\OneDrive\\Desktop\\0_mL_ATLAS=>/data
+    """
+    pairs = []
+    for part in os.environ.get("PFD_PATH_MAP", "").split(";"):
+        if "=>" in part:
+            a, b = part.split("=>", 1)
+            a, b = a.strip().replace("\\", "/").rstrip("/"), b.strip().rstrip("/")
+            if a:
+                pairs.append((a, b))
+    return sorted(pairs, key=lambda ab: -len(ab[0]))
+
+
+def remap(path, pairs=None):
+    pairs = path_map() if pairs is None else pairs
+    if not pairs:
+        return path
+    norm = path.replace("\\", "/")
+    for a, b in pairs:
+        if norm.lower() == a.lower() or norm.lower().startswith(a.lower() + "/"):
+            return b + norm[len(a):]
+    return path
+
+
 def expected_inventory():
     inv = {}
     for r in REGIONS:
@@ -65,19 +93,20 @@ def resolve_locations(home=False, office=False, explicit=None):
 
 def parse_locations(path):
     loc = {}
-    with open(path, encoding="utf-8-sig") as f:
+    pairs = path_map()
+    with open(remap(path, pairs), encoding="utf-8-sig") as f:
         for raw in f:
             line = raw.strip().strip('"').strip("'")
             if not line or line.startswith("#") or set(line) <= {"."}:
                 continue
             if "=" in line and "\\" not in line.split("=", 1)[0] and "/" not in line.split("=", 1)[0]:
                 k, v = line.split("=", 1)
-                loc[k.strip()] = v.strip().strip('"').strip("'")
+                loc[k.strip()] = remap(v.strip().strip('"').strip("'"), pairs)
                 continue
             fn = re.split(r"[\\/]", line)[-1].lower()
             key = _FN_TO_KEY.get(fn)
             if key:
-                loc.setdefault(key, line)
+                loc.setdefault(key, remap(line, pairs))
     return loc
 
 

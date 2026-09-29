@@ -1,4 +1,4 @@
-/* hub.js -- the navigation surface. mk25.
+/* hub.js -- the navigation surface. mk25; mk47 adds the section-view side panel.
 
    Three sets, one selection.
 
@@ -242,12 +242,96 @@
      TV, the cards as a switcher, the nav) and the section takes the full width.
      The deck no longer glides into the dock -- it stays on the landing view,
      hidden with it, and is exactly where it was when Home brings it back. */
+  // ---------------------------------------------------------- side panel --
+  /* mk47: the section view keeps a side panel under the half-size TV. It holds
+     the open section's outline: sections/_side/<id>.html when there is one
+     (EDA: the Hygiene / Exploration layers), otherwise a list built here from
+     the sheet's own "Planned" items so no section comes up with an empty rail. */
+  const sideBody = document.getElementById("side-body");
+  const sideName = document.getElementById("side-name");
+  const sideGlyph = document.getElementById("side-glyph");
+
+  function buildOutline(box, id) {
+    const sheet = document.querySelector(`.screen-body .sheet[data-sheet="${id}"]`);
+    const items = sheet ? [...sheet.querySelectorAll(".stub-plan > li")] : [];
+    if (!items.length) {
+      box.innerHTML = '<p class="ol-note">No outline for this section yet.</p>';
+      return;
+    }
+    const ol = document.createElement("ol"); ol.className = "ol-layers";
+    const layer = document.createElement("li"); layer.className = "ol-layer";
+    layer.innerHTML = '<div class="ol-lh"><span class="ol-n">&middot;</span><b>Planned</b></div>';
+    const ul = document.createElement("ul"); ul.className = "ol-items";
+    items.forEach((li, k) => {
+      if (!li.id) li.id = `${id}-plan-${k}`;
+      const b = li.querySelector("b");
+      const row = document.createElement("li");
+      const btn = document.createElement("button");
+      btn.type = "button"; btn.dataset.jump = "#" + li.id;
+      const t = document.createElement("span"); t.textContent = b ? b.textContent : `item ${k + 1}`;
+      const st = document.createElement("i"); st.className = "st st-planned"; st.textContent = "planned";
+      btn.append(t, st); row.appendChild(btn); ul.appendChild(row);
+    });
+    layer.appendChild(ul); ol.appendChild(layer); box.appendChild(ol);
+  }
+
+  function showOutline(f) {
+    if (sideName) sideName.textContent = f.name;
+    if (sideGlyph) sideGlyph.textContent = f.glyph;
+    if (!sideBody) return;
+    sideBody.querySelectorAll(".outline").forEach(box => {
+      const on = box.dataset.outline === f.id;
+      if (on && !box.firstElementChild) buildOutline(box, f.id);
+      box.hidden = !on;
+    });
+    sideBody.scrollTop = 0;
+  }
+
+  // flash the thing the outline pointed at, so the eye lands on it
+  function ping(el) {
+    if (!el) return;
+    el.classList.remove("ol-ping"); void el.offsetWidth; el.classList.add("ol-ping");
+    clearTimeout(el._pingT); el._pingT = setTimeout(() => el.classList.remove("ol-ping"), 1300);
+  }
+  function jumpTo(sel) {
+    const body = document.getElementById("screen-body");
+    const el = body && body.querySelector(sel);
+    if (!el) return null;
+    el.scrollIntoView({behavior: reduce ? "auto" : "smooth", block: "start"});
+    ping(el);
+    return el;
+  }
+  if (sideBody) sideBody.addEventListener("click", e => {
+    const btn = e.target.closest("button[data-jump], button[data-sort]");
+    if (!btn) return;
+    sideBody.querySelectorAll("[aria-current]").forEach(x => x.removeAttribute("aria-current"));
+    btn.setAttribute("aria-current", "true");
+    if (btn.dataset.sort) {
+      /* a sort only means something once there are graphs: before the first
+         run, point at the Generate button instead of sorting an empty grid */
+      const results = document.getElementById("eda-results");
+      const sortSel = document.getElementById("eda-sort");
+      if (!results || results.hidden || !sortSel) { jumpTo("#eda-go"); return; }
+      sortSel.value = btn.dataset.sort;
+      sortSel.dispatchEvent(new Event("change", {bubbles: true}));
+      jumpTo("#eda-tools");
+      return;
+    }
+    const target = btn.dataset.jump;
+    if (target === "#eda-grid") {
+      const results = document.getElementById("eda-results");
+      if (!results || results.hidden) { jumpTo("#eda-go"); return; }
+    }
+    jumpTo(target);
+  });
+
   function showFace() {
     const f = faces[sel];
     if (scrName) scrName.textContent = f.name;
     if (scrGlyph) scrGlyph.textContent = f.glyph;
     if (scrBlurb) scrBlurb.textContent = f.blurb;
     showSheet(f.id);
+    showOutline(f);
     document.dispatchEvent(new CustomEvent("hub:open", {detail: {id: f.id, name: f.name}}));
   }
 

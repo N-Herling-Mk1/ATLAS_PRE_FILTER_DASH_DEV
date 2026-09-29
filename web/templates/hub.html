@@ -84,6 +84,23 @@
     </div>
   </section>
 
+  <!-- ===== mk47 side panel: shown only in section view. One outline per
+       section; sections/_side/<id>.html when it exists, otherwise hub.js
+       builds one from the sheet's "Planned" list. ===== -->
+  <section class="side panel" id="side" aria-label="Section outline">
+    <div class="side-head">
+      <span class="side-glyph" id="side-glyph" aria-hidden="true"></span>
+      <b id="side-name">&mdash;</b>
+    </div>
+    <nav class="side-body" id="side-body" aria-label="Outline">
+      {% for id, name, glyph, blurb in tiles %}
+      <div class="outline" data-outline="{{ id }}" hidden>
+        {% include "sections/_side/" ~ id ~ ".html" ignore missing %}
+      </div>
+      {% endfor %}
+    </nav>
+  </section>
+
   <!-- ===== main area: the deck, or the section it opened ===== -->
   <section class="stage panel" aria-label="Deck">
     <div class="deck-wrap" id="deck-wrap">

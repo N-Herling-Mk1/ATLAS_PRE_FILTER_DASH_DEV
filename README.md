@@ -20,6 +20,13 @@ The sign-in page sweeps a detector view in on load. Signing in fires an
 illustrative event, drawn in the browser and labelled as not data: "LLP detected"
 for the right password, "no LLP detected" (with a rumble) for a wrong one.
 
+## Run it in a container (Docker Desktop or Podman)
+
+    .\run_docker.ps1                 # local: http://127.0.0.1:5710/, no tunnel
+    .\run_docker.ps1 -Tunnel         # app + cloudflared -> nth-atlas-llp.com, nothing published
+
+Setup, the Cloudflare steps and the network layout: `deploy/README.md`.
+
 ## Modes
 
 | mode   | server              | cookie        | client IP from      | use                         |

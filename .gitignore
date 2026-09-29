@@ -40,3 +40,6 @@ desktop.ini
 .DS_Store
 *locations*.txt
 out/
+
+# --- container ------------------------------------------------------------
+deploy/docker/stack.env

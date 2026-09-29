@@ -1,0 +1,55 @@
+{# EDA outline (mk47): the two layers of docs/EDA_PLAN_mk1.md, in their
+   load-bearing order. Status is what is built today, not what is planned:
+     st-gate    runs as a gate scan (Run page, Verdict board)
+     st-sheet   on this sheet now
+     partial   part of it is on this sheet
+     planned   not built
+   data-jump scrolls the sheet; data-sort also sets the grid's sort. #}
+<ol class="ol-layers">
+  <li class="ol-layer" data-layer="inputs">
+    <div class="ol-lh"><span class="ol-n">0</span><b>Inputs</b></div>
+    <ul class="ol-items">
+      <li><button type="button" data-jump="#eda-files-h"><span>Input files &amp; column counts</span><i class="st st-sheet">sheet</i></button></li>
+      <li><button type="button" data-jump="#eda-go"><span>Generate S / B graphs</span><i class="st st-sheet">sheet</i></button></li>
+    </ul>
+  </li>
+
+  <li class="ol-layer" data-layer="hygiene">
+    <div class="ol-lh"><span class="ol-n">1</span><b>Hygiene</b><em>reject by content</em></div>
+    <p class="ol-note">Rules declared in advance. Runs first: a spike or sentinel left in corrupts every
+      statistic below. Only this layer produces DROP.</p>
+    <ul class="ol-items">
+      <li><a href="/board"><span>Sentinels &amp; missingness</span><i class="st st-gate">S2</i></a></li>
+      <li><a href="/board"><span>Dead columns, incl. after cuts</span><i class="st st-gate">S3</i></a></li>
+      <li><a href="/board"><span>Spikes &amp; zero-inflation</span><i class="st st-gate">S5</i></a></li>
+      <li><a href="/board"><span>Cardinality</span><i class="st st-gate">S4</i></a></li>
+      <li><a href="/board"><span>Leakage</span><i class="st st-gate">S13</i></a></li>
+      <li><a href="/board"><span>Dynamic range / span</span><i class="st st-gate">S9</i></a></li>
+      <li><a href="/board"><span>Tail diagnosis</span><i class="st st-gate">S6</i></a></li>
+    </ul>
+    <p class="ol-note small">Every number on this sheet is computed on the same masking (canon C7).</p>
+  </li>
+
+  <li class="ol-layer" data-layer="exploration">
+    <div class="ol-lh"><span class="ol-n">2</span><b>Exploration</b><em>analyse features</em></div>
+    <p class="ol-note">What the columns carry, alone and together. Rules come from the data.</p>
+    <ul class="ol-items">
+      <li class="ol-sub">2·1 Separation, per feature</li>
+      <li><button type="button" data-sort="sep"><span>D<sub>B</sub> above permutation null</span><i class="st st-sheet">sheet</i></button></li>
+      <li><button type="button" data-sort="shape"><span>MaxEnt fits, shape-carried separation</span><i class="st st-sheet">sheet</i></button></li>
+      <li><button type="button" data-jump="#eda-grid"><span>KS (enlarged view, CDF panel)</span><i class="st st-partial">partial</i></button></li>
+      <li><span class="ol-off"><span>AUC, MI table</span><i class="st st-planned">planned</i></span></li>
+
+      <li class="ol-sub">2·2 Correlation structure</li>
+      <li><span class="ol-off"><span>Σ<sub>S</sub> − Σ<sub>B</sub> heatmap, bootstrap</span><i class="st st-planned">next</i></span></li>
+
+      <li class="ol-sub">2·3 Redundancy</li>
+      <li><span class="ol-off"><span>|r| ≥ 0.98, clusters, conditioning</span><i class="st st-planned">planned</i></span></li>
+
+      <li class="ol-sub">2·4 Stability slices</li>
+      <li><button type="button" data-jump="#eda-grid"><span>Mass point (enlarged view split)</span><i class="st st-partial">partial</i></button></li>
+      <li><button type="button" data-jump="#eda-go"><span>Barrel / endcap (region toggle)</span><i class="st st-partial">partial</i></button></li>
+      <li><span class="ol-off"><span>CV fold, run period</span><i class="st st-planned">planned</i></span></li>
+    </ul>
+  </li>
+</ol>

@@ -1,0 +1,12 @@
+# Local test override: publish the app on THIS machine's loopback only,
+# no tunnel. Adds a non-internal network, because Docker cannot publish a port
+# from an internal-only network -- so in this mode the app does have egress.
+#
+#   docker compose -f compose.yaml -f compose.local.yaml --env-file deploy/docker/stack.env up --build
+#   -> http://127.0.0.1:5710/
+services:
+  app:
+    ports: ["127.0.0.1:5710:5710"]
+    networks: [inner, local]
+networks:
+  local: {}

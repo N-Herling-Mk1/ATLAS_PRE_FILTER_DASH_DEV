@@ -1,0 +1,26 @@
+# nothing secret, no data, no state goes into the build context
+.env
+.env.*
+!.env.example
+.git
+**/__pycache__
+**/*.py[cod]
+.pytest_cache
+out/
+data/
+store/
+cache/
+sessions/
+logs/
+*.csv
+*.root
+*.parquet
+*.npz
+*.npy
+*.h5
+*.hdf5
+*.pfd.zip
+*locations*.txt
+tests/
+*.ps1
+deploy/docker/*.env

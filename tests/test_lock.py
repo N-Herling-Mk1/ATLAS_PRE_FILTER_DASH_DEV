@@ -212,3 +212,21 @@ def test_fetch_login_returns_json(app_pw):
     assert r.status_code == 200 and r.get_json()["ok"] is True
     assert r.get_json()["next"].startswith("/board")
     assert c.get("/api/whoami").status_code == 200
+
+
+def test_hub_side_panel_and_root2csv(app_pw):
+    """mk47: every tile has an outline slot in the side panel, EDA's outline
+    names both layers, and the root2csv sheet links to the repo."""
+    from server.pages import EXTERNAL, TILES
+    app, pw = app_pw
+    c = app.test_client()
+    _login(c, pw)
+    html = c.get("/").get_data(as_text=True)
+    assert 'id="side"' in html
+    for tid, *_ in TILES:
+        assert f'data-outline="{tid}"' in html, tid
+    assert "Hygiene" in html and "Exploration" in html
+    assert 'data-sheet="root2csv"' in html
+    assert EXTERNAL["root2csv"] == "https://github.com/N-Herling-Mk1/root_to_csv"
+    assert f'href="{EXTERNAL["root2csv"]}"' in html
+    assert 'rel="noopener noreferrer"' in html

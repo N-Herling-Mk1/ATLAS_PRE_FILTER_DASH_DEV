@@ -162,6 +162,17 @@ is a difference of two noisy estimates.
 - The old per-card "MaxEnt" numbers are renamed **Gaussian reference**. They
   measure against one MaxEnt yardstick; they are not a fit.
 
+### mk3 (drop mk47) — built
+
+- **Side panel in section view.** The top bar stays as mk2 left it (half-size TV,
+  card switcher, nav); a side panel returns under the TV, down the left of the
+  section. For EDA it outlines the two passes of §1 as layers: **0 Inputs**,
+  **1 Hygiene** (reject by content: S2, S3, S5, S4, S13, S9, S6, linked to the
+  Verdict board, where they run) and **2 Exploration** (2·1–2·4), each item
+  tagged with what is built: *sheet*, *partial*, *gate* or *planned*. Items on
+  the sheet jump to it; the two separation items also set the grid's sort.
+  Before the first run they point at Generate instead.
+
 ### Next, in order
 
 1. 2·2 heatmap: Σ_S − Σ_B with bootstrap error, Pearson / Spearman / dCor, per region.

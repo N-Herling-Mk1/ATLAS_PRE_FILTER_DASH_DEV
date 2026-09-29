@@ -412,9 +412,9 @@ body[data-page="hub"] { display: flow-root; }
 .rn-home { display: none; }
 
 .hub[data-state="screen"] {
-  grid-template-columns: 128px minmax(0, 1fr) minmax(300px, 25vw);
+  grid-template-columns: minmax(210px, 15vw) minmax(0, 1fr) minmax(300px, 25vw);
   grid-template-rows: auto minmax(0, 1fr);
-  grid-template-areas: "tv band nav" "stage stage stage"; }
+  grid-template-areas: "tv band nav" "side stage stage"; }
 .hub[data-state="screen"] .rail { display: contents; }
 .hub[data-state="screen"] .rail-dock { display: none; }
 .hub[data-state="screen"] .rail-tv { grid-area: tv; padding: 5px; cursor: pointer; align-self: stretch;
@@ -457,7 +457,9 @@ body[data-page="hub"] { display: flow-root; }
 
 @media (max-width: 1100px) {
   .hub[data-state="screen"] { grid-template-columns: 110px minmax(0, 1fr);
-    grid-template-areas: "tv nav" "band band" "stage stage"; height: 100%; }
+    grid-template-rows: auto auto auto minmax(0, 1fr);
+    grid-template-areas: "tv nav" "band band" "side side" "stage stage"; height: 100%; }
+  .hub[data-state="screen"] .side { max-height: 190px; }
   .hub[data-state="screen"] .cards { grid-auto-flow: row; grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
 
@@ -499,3 +501,74 @@ body[data-page="hub"] { display: flow-root; }
   .tv-screen.shear .tv-l { animation: none; }
   .tv-screen img, .placard, .card { transition: none; }
 }
+
+
+/* ================================================= mk47: side panel --
+   Section view is now
+
+       [ TV ½ ][ section cards as a switcher ............ ][ nav ]
+       [ side ][ the section .................................... ]
+
+   The side column is the TV's column, so the Home TV sits directly over the
+   outline. The landing view never shows it. */
+.side { display: none; }
+.hub[data-state="screen"] .side { grid-area: side; display: grid; min-height: 0;
+  grid-template-rows: auto minmax(0, 1fr); gap: 10px; padding: 12px 12px 12px 14px; }
+.side-head { display: flex; align-items: center; gap: 8px; min-width: 0;
+  border-bottom: 1px solid var(--rule); padding-bottom: 9px; }
+.side-head b { font-family: var(--display); font-size: 12px; letter-spacing: .08em; color: #fff;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.side-glyph { font-family: var(--mono); font-size: 9px; letter-spacing: .14em; color: var(--accent);
+  border: 1px solid var(--rule-hi); padding: 3px 6px; white-space: nowrap; border-radius: 5px; }
+.side-body { overflow: auto; min-height: 0; padding-right: 2px; display: block; }
+.side-body .outline { display: block; }
+.outline[hidden] { display: none; }
+
+.ol-layers { list-style: none; margin: 0; padding: 0; display: grid; gap: 16px; align-content: start; }
+.ol-layer { display: grid; gap: 6px; align-content: start; }
+.ol-lh { display: flex; align-items: baseline; gap: 7px; flex-wrap: wrap; }
+.ol-lh b { font-family: var(--display); font-size: 12px; font-weight: 700; letter-spacing: .1em;
+  text-transform: uppercase; color: #fff; }
+.ol-lh em { font-style: normal; font-size: 10.5px; color: var(--ink-2); flex-basis: 100%; padding-left: 25px; }
+.ol-n { display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: 50%;
+  font-family: var(--display); font-size: 10px; font-weight: 800; color: var(--accent-ink);
+  background: var(--accent); box-shadow: 0 0 8px var(--accent-glow); }
+/* layer colours from the event display: hygiene is the muon red (the only
+   layer that can DROP), exploration the detector blue */
+.ol-layer[data-layer="hygiene"] .ol-n { background: var(--drop); color: #fff; box-shadow: 0 0 8px rgba(227, 38, 46, .5); }
+.ol-layer[data-layer="exploration"] .ol-n { background: var(--blue); color: #fff; box-shadow: 0 0 8px var(--blue-glow); }
+.ol-layer[data-layer="inputs"] .ol-n { background: var(--steel-2); color: var(--ink); border: 1px solid var(--rule-hi); box-shadow: none; }
+.ol-note { margin: 0; font-size: 11px; line-height: 1.45; color: var(--ink-2); }
+.ol-items { list-style: none; margin: 0; padding: 0 0 0 9px; display: grid; gap: 2px; align-content: start;
+  border-left: 1px solid var(--rule-hi); }
+.ol-layer[data-layer="hygiene"] .ol-items { border-left-color: rgba(227, 38, 46, .55); }
+.ol-layer[data-layer="exploration"] .ol-items { border-left-color: rgba(30, 136, 216, .6); }
+.ol-sub { font-size: 9.5px; letter-spacing: .14em; text-transform: uppercase; color: var(--meta);
+  padding: 7px 0 2px 6px; }
+.ol-items a, .ol-items button, .ol-off { display: flex; align-items: center; justify-content: space-between;
+  gap: 8px; width: 100%; text-align: left; padding: 5px 6px; border-radius: 6px; font: inherit;
+  font-size: 11.5px; line-height: 1.3; color: var(--ink); text-decoration: none;
+  background: transparent; border: 1px solid transparent; cursor: pointer; }
+.ol-items a:hover, .ol-items button:hover { background: var(--steel-2); border-color: var(--rule-hi); }
+.ol-items button[aria-current] { background: var(--steel-2); border-color: var(--accent);
+  box-shadow: inset 3px 0 0 var(--accent); }
+.ol-off { cursor: default; color: var(--meta); }
+.st { font-style: normal; font-size: 9px; letter-spacing: .1em; text-transform: uppercase;
+  padding: 1px 5px; border-radius: 4px; border: 1px solid currentColor; white-space: nowrap; flex: none; }
+.st-gate { color: var(--drop); }
+.st-sheet { color: var(--pass); }
+.st-partial { color: var(--ember); }
+.st-planned { color: var(--meta); }
+
+/* where an outline click lands */
+.ol-ping { animation: ol-ping 1.2s ease-out; border-radius: 6px; }
+@keyframes ol-ping { 0% { box-shadow: 0 0 0 2px var(--accent), 0 0 18px var(--accent-glow); }
+  100% { box-shadow: 0 0 0 2px transparent, 0 0 0 transparent; } }
+
+/* the root2csv sheet: a pointer out */
+.stub.ext .ext-go { justify-self: start; display: inline-block; padding: 11px 18px; border-radius: 8px;
+  font-family: var(--display); font-weight: 800; letter-spacing: .12em; font-size: 13px;
+  text-decoration: none; }
+.stub.ext .ext-url { margin: -8px 0 0; }
+.stub.ext code { font-family: var(--mono); color: var(--accent); }
+@media (prefers-reduced-motion: reduce) { .ol-ping { animation: none; outline: 2px solid var(--accent); } }

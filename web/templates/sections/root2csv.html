@@ -1,0 +1,23 @@
+<!-- root2csv sheet (mk47). A pointer, not a mirror: the tool lives in its own
+     repo and runs where the ROOT files are. The URL comes from pages.EXTERNAL. -->
+<div class="stub ext">
+  <p class="stub-lead">Scan and flatten ATLAS ROOT ntuples to CSV with uproot and awkward.
+    No ROOT build, no ATLAS environment. This is where this dashboard's input CSVs come from.</p>
+  <a class="btn primary ext-go" id="root2csv-go" href="{{ external['root2csv'] }}" target="_blank" rel="noopener noreferrer">
+    Open the root_to_csv repository &#8599;</a>
+  <p class="small muted ext-url"><code>{{ external['root2csv'] }}</code></p>
+  <h4 class="stub-h">The three layers</h4>
+  <ul class="stub-plan">
+    <li id="r2c-scan"><b>1 &middot; Scan</b>
+      <span><code>scan.py</code>: sorts every branch into scalar, vec1, jagged, jagged-deep, empty or
+        unreadable, and writes a manifest to audit.</span></li>
+    <li id="r2c-convert"><b>2 &middot; Convert</b>
+      <span><code>convert.py</code>: flattens to CSV and parquet, in one quick pass or following the
+        manifest's policy for jagged branches.</span></li>
+    <li id="r2c-filter"><b>3 &middot; Filter (optional)</b>
+      <span><code>dropfilter.py</code>: drops the branches in <code>drop_list.txt</code> from the parquet
+        without reading the ROOT file again.</span></li>
+  </ul>
+  <p class="stub-note">Quick start: <code>python3 convert.py /path/to/file.root</code>. Nothing on this
+    sheet runs the tool; the dashboard reads its CSV output through the locations file.</p>
+</div>

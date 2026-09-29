@@ -1,0 +1,57 @@
+# ATLAS_PRE_FILTER_DASH -- the hosted stack (mk47).
+#
+#   app          the site; live mode, waitress :5710. On the `inner` network
+#                only, which is internal: no route out, nothing published.
+#   cloudflared  the tunnel sidecar. On `inner` (to reach app) and `egress`
+#                (to reach Cloudflare). It is the only way in.
+#
+#   docker compose up -d --build          (podman compose works the same)
+#
+# Local test without the tunnel: add compose.local.yaml (see deploy/README.md).
+name: atlas-pfd
+
+services:
+  app:
+    build:
+      context: .
+      args:
+        PFD_CODE_COMMIT: ${PFD_CODE_COMMIT:-unknown}
+    image: atlas-pfd:${PFD_TAG:-dev}
+    restart: unless-stopped
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    environment:
+      PFD_LOCATIONS: /config/locations.txt
+      # Windows paths in the locations file -> the /data mount. Set in deploy/docker/stack.env.
+      PFD_PATH_MAP: ${PFD_PATH_MAP:-}
+    volumes:
+      - ./.env:/app/.env:ro                                  # password hash + secret key (set_password)
+      - ${PFD_LOCATIONS_HOST:?set PFD_LOCATIONS_HOST in deploy/docker/stack.env}:/config/locations.txt:ro
+      - ${PFD_DATA_HOST:?set PFD_DATA_HOST in deploy/docker/stack.env}:/data:ro
+      - pfd_store:/store
+    networks: [inner]
+
+  cloudflared:
+    image: cloudflare/cloudflared:${CLOUDFLARED_TAG:-2025.8.0}   # pinned; bump deliberately
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${TUNNEL_TOKEN:-}          # required with --profile tunnel; see deploy/README.md
+    depends_on:
+      app:
+        condition: service_healthy
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    networks: [inner, egress]
+    profiles: [tunnel]
+
+networks:
+  inner:
+    internal: true
+  egress: {}
+
+volumes:
+  pfd_store: {}

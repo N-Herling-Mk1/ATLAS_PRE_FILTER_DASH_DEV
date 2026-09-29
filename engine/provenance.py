@@ -12,6 +12,9 @@ def code_commit():
     """Short git commit of this repo, with '+dirty' if the tree has local edits.
     'not-a-repo' / 'git-unavailable' are reported as such, never guessed."""
     global _commit
+    if _commit is None and os.environ.get("PFD_CODE_COMMIT"):
+        # the container image has no .git; the build stamps the commit instead
+        _commit = os.environ["PFD_CODE_COMMIT"].strip() + " (image)"
     if _commit is None:
         try:
             h = subprocess.run(["git", "rev-parse", "--short", "HEAD"], cwd=ROOT,
