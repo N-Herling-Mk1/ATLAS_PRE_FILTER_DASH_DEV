@@ -227,6 +227,8 @@ def test_hub_side_panel_and_root2csv(app_pw):
         assert f'data-outline="{tid}"' in html, tid
     assert "Hygiene" in html and "Exploration" in html
     assert 'data-sheet="root2csv"' in html
-    assert EXTERNAL["root2csv"] == "https://github.com/N-Herling-Mk1/root_to_csv"
-    assert f'href="{EXTERNAL["root2csv"]}"' in html
+    r2c = EXTERNAL["root2csv"]
+    assert r2c["site"] == "https://n-herling-mk1.github.io/root_to_csv/"
+    assert r2c["repo"].startswith("https://github.com/N-Herling-Mk1/root_to_csv")
+    assert f'href="{r2c["site"]}"' in html and f'href="{r2c["repo"]}"' in html
     assert 'rel="noopener noreferrer"' in html

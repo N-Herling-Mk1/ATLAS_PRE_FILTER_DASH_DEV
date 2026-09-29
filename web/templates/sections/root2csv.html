@@ -1,11 +1,25 @@
 <!-- root2csv sheet (mk47). A pointer, not a mirror: the tool lives in its own
-     repo and runs where the ROOT files are. The URL comes from pages.EXTERNAL. -->
+     repo and runs where the ROOT files are. The two URLs come from pages.EXTERNAL. -->
 <div class="stub ext">
   <p class="stub-lead">Scan and flatten ATLAS ROOT ntuples to CSV with uproot and awkward.
     No ROOT build, no ATLAS environment. This is where this dashboard's input CSVs come from.</p>
-  <a class="btn primary ext-go" id="root2csv-go" href="{{ external['root2csv'] }}" target="_blank" rel="noopener noreferrer">
-    Open the root_to_csv repository &#8599;</a>
-  <p class="small muted ext-url"><code>{{ external['root2csv'] }}</code></p>
+  {% set r2c = external['root2csv'] %}
+  <div class="ext-opts">
+    <a class="ext-opt" id="root2csv-site" href="{{ r2c.site }}" target="_blank" rel="noopener noreferrer">
+      <span class="ext-n">1</span>
+      <b>Front end &#8599;</b>
+      <span>The guide site (<code>index.html</code>): tiers, the manifest how-to, the ignored-branch list,
+        the six bins, glossary.</span>
+      <code class="ext-url">{{ r2c.site }}</code>
+    </a>
+    <a class="ext-opt" id="root2csv-repo" href="{{ r2c.repo }}" target="_blank" rel="noopener noreferrer">
+      <span class="ext-n">2</span>
+      <b>Repository &amp; README &#8599;</b>
+      <span>The code (<code>scan.py</code>, <code>convert.py</code>, <code>dropfilter.py</code>) and the
+        README, on GitHub.</span>
+      <code class="ext-url">{{ r2c.repo }}</code>
+    </a>
+  </div>
   <h4 class="stub-h">The three layers</h4>
   <ul class="stub-plan">
     <li id="r2c-scan"><b>1 &middot; Scan</b>

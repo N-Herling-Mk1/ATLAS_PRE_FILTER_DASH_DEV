@@ -569,6 +569,15 @@ body[data-page="hub"] { display: flow-root; }
 .stub.ext .ext-go { justify-self: start; display: inline-block; padding: 11px 18px; border-radius: 8px;
   font-family: var(--display); font-weight: 800; letter-spacing: .12em; font-size: 13px;
   text-decoration: none; }
-.stub.ext .ext-url { margin: -8px 0 0; }
+.ext-opts { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+.ext-opt { display: grid; gap: 6px; align-content: start; padding: 14px 16px; border-radius: 10px;
+  text-decoration: none; color: var(--ink); background: var(--steel-2); border: 1px solid var(--rule-hi);
+  transition: border-color .14s ease, box-shadow .14s ease; }
+.ext-opt:hover, .ext-opt:focus-visible { border-color: var(--accent); box-shadow: 0 0 18px -6px var(--accent-glow); }
+.ext-opt b { font-family: var(--display); font-weight: 800; font-size: 14px; letter-spacing: .08em; color: #fff; }
+.ext-opt > span:not(.ext-n) { font-size: 12.5px; line-height: 1.5; color: var(--ink-2); }
+.ext-n { display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 50%;
+  font-family: var(--display); font-size: 10px; font-weight: 800; color: var(--accent-ink); background: var(--accent); }
+.stub.ext .ext-url { font-size: 10.5px; word-break: break-all; }
 .stub.ext code { font-family: var(--mono); color: var(--accent); }
 @media (prefers-reduced-motion: reduce) { .ol-ping { animation: none; outline: 2px solid var(--accent); } }

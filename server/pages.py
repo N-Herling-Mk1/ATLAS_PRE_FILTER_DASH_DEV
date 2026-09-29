@@ -30,12 +30,15 @@ TILES = [
     ("features", "Features", "X", "The feature set itself: definitions, coverage, drift."),
     ("models", "Models", "f(X)", "Trained models, their inputs, and their verdicts."),
     ("eda", "EDA Dashboard", "EDA", "Distributions, correlations and coverage across the prefilter inputs."),
-    ("root2csv", "root2csv", "ROOT→CSV", "Scan and flatten ATLAS ROOT ntuples to CSV. Links out to the repo."),
+    ("root2csv", "root2csv", "ROOT→CSV", "Scan and flatten ATLAS ROOT ntuples to CSV. Opens its front end or its repo."),
 ]
 
 # Tiles whose sheet is a pointer to somewhere else. The template reads the URL
 # from here so the link lives in one place.
-EXTERNAL = {"root2csv": "https://github.com/N-Herling-Mk1/root_to_csv"}
+EXTERNAL = {"root2csv": {
+    "site": "https://n-herling-mk1.github.io/root_to_csv/",           # the front end (index.html, GitHub Pages)
+    "repo": "https://github.com/N-Herling-Mk1/root_to_csv#readme",    # the repo, opened at its README
+}}
 
 # Images the TV will not show: these are user-interface assets that happen to
 # live in the same folder. Everything else in assets/images gets a turn.
