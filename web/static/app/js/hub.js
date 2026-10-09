@@ -107,7 +107,8 @@
      rather than a second copy of either. */
   function armButton(el, bleed) {
     if (!el) return;
-    btnfx.watch(el, r => trace.fire(r, {bleed: bleed || 56}));
+    // mk49: no circuit sprawl off the buttons -- only the green glare
+    btnfx.watch(el, r => trace.fire(r, {bleed: bleed || 56, tracks: false}));
   }
 
   const prev = document.getElementById("deck-prev");
@@ -339,7 +340,8 @@
     if (open) { showFace(); return; }
     // inward: the tracks write themselves across the panel the section is
     // opening into, rather than spraying off its edges
-    trace.fire(faceRect(), {bleed: 86, inward: true});
+    // mk49: a bigger box (half again per side) and a harder glare with streaks
+    trace.fire(faceRect(), {bleed: 190, inward: true, grow: 0.5, glare: 1.9});
     open = true;
     hub.dataset.state = "screen";
     if (screen) screen.hidden = false;
@@ -375,6 +377,33 @@
   });
 
   setSel(0, true);
+
+  // ------------------------------------------------------- framed pages --
+  /* mk49: a framed external page is shown whole, scaled down, so nothing in it
+     needs scrolling. The frame is laid out at its declared size (data-vw x
+     data-vh, the page's own full size -- it is another origin, so it cannot be
+     measured from here) and scaled to the height the sheet has. Sizes go on
+     through the CSSOM because the CSP rules out style attributes. */
+  document.querySelectorAll(".embed").forEach(box => {
+    const view = box.querySelector(".embed-view");
+    const fr = view && view.querySelector("iframe[data-vw]");
+    if (!fr) return;
+    const vw = +fr.dataset.vw, vh = +fr.dataset.vh;
+    const fit = () => {
+      const H = box.clientHeight, W = box.clientWidth;
+      if (!H || !W) return;                       // sheet not on screen yet
+      const side = W > 700 ? 250 : 0;              // room kept for the link column
+      const s = Math.max(0.2, Math.min(1, (H - 2) / vh, (W - side - 2) / vw));
+      fr.style.width = vw + "px"; fr.style.height = vh + "px";
+      fr.style.transform = `scale(${s.toFixed(4)})`;
+      view.style.width = Math.round(vw * s) + "px";
+      view.style.height = Math.round(vh * s) + "px";
+    };
+    if (window.ResizeObserver) new ResizeObserver(fit).observe(box);
+    window.addEventListener("resize", fit);
+    document.addEventListener("hub:open", () => requestAnimationFrame(fit));
+    fit();
+  });
 
   // --------------------------------------------------------------- sound --
   /* Same control as nathanherling.com's #sndToggle, but a real mute: off means

@@ -20,6 +20,7 @@ from catalogue.store import Catalogue
 
 from . import notifier
 from .jobs import JobQueue
+from .pages import EMBED_SRC
 from .settings import Settings
 from .workspace import Workspaces
 
@@ -117,7 +118,10 @@ def create_app(**overrides):
         resp.headers["Referrer-Policy"] = "same-origin"
         resp.headers["Content-Security-Policy"] = (
             "default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; "
-            "font-src 'self'; connect-src 'self'; frame-ancestors 'none'; form-action 'self'")
+            "font-src 'self'; connect-src 'self'; frame-ancestors 'none'; form-action 'self'; "
+            # mk48: the hub frames the NN genealogy page and nothing else; every
+            # other route, the sign-in page included, may frame nothing at all
+            "frame-src " + (" ".join(EMBED_SRC) if request.path == "/" else "'none'"))
         if not request.path.startswith(PUBLIC_PREFIXES):
             resp.headers["Cache-Control"] = "no-store"
         return resp

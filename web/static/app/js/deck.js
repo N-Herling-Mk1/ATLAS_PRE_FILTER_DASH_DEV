@@ -180,16 +180,21 @@
     const stopTween = () => { if (tween) { cancelAnimationFrame(tween); tween = null; } };
 
     // ------------------------------------------------------------- drag --
+    let downX = 0, downY = 0, travelled = 0, downCard = -1, tapAt = -1e9;
     stage.addEventListener("pointerdown", e => {
       if (mini || (e.button != null && e.button !== 0)) return;
       stopTween();
       dragging = true; lastX = e.clientX; lastT = performance.now(); vel = 0;
+      // mk49: remember what was pressed and where, to tell a tap from a drag
+      downX = e.clientX; downY = e.clientY; travelled = 0;
+      downCard = e.target.closest ? cards.indexOf(e.target.closest(".placard")) : -1;
       stage.classList.add("dragging");
       stage.setPointerCapture(e.pointerId);
     });
     stage.addEventListener("pointermove", e => {
       if (!dragging) return;
       const now = performance.now(), dx = e.clientX - lastX;
+      travelled = Math.max(travelled, Math.hypot(e.clientX - downX, e.clientY - downY));
       const dt = Math.max(8, now - lastT);   // a sub-ms synthetic event would fling it
       const dA = dx * 0.32;                   // px -> degrees
       angle += dA;
@@ -203,6 +208,16 @@
       stage.classList.remove("dragging");
       if (stage.hasPointerCapture && stage.hasPointerCapture(e.pointerId)) stage.releasePointerCapture(e.pointerId);
       kick();
+      /* mk49: a tap on the front placard opens it. The click listener below
+         never saw these: the stage captures the pointer on press, and a
+         captured pointer's click is delivered to the stage, not the placard.
+         So the tap is recognised here -- pressed on the front face, released
+         without having travelled. */
+      if (e.type === "pointerup" && !mini && travelled < 6 && downCard >= 0
+          && downCard === facing() && opts.onOpen) {
+        tapAt = performance.now();
+        opts.onOpen(downCard);
+      }
     };
     stage.addEventListener("pointerup", drop);
     stage.addEventListener("pointercancel", drop);
@@ -211,6 +226,7 @@
     cards.forEach((c, i) => c.addEventListener("click", e => {
       e.preventDefault();
       if (mini || Math.abs(vel) > 0.6) return;  // a throw, not a click
+      if (performance.now() - tapAt < 400) return;   // the tap above already opened it
       if (facing() === i && opts.onOpen) opts.onOpen(i);
     }));
 

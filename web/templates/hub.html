@@ -73,7 +73,9 @@
       <h2>Sections</h2>
       <span class="small muted" id="band-hint">Click a card to select it. Double-click to open.</span>
     </div>
-    <div class="cards" id="cards" role="tablist" aria-label="Sections">
+    {# mk48: two balanced rows; the column count is a class because the CSP
+       (style-src 'self') rules out an inline custom property #}
+    <div class="cards cols-{{ (tiles|length + 1) // 2 }}" id="cards" role="tablist" aria-label="Sections">
       {% for id, name, glyph, blurb in tiles %}
       <button type="button" class="card" role="tab" aria-selected="false"
               data-id="{{ id }}" data-name="{{ name }}" title="{{ blurb }}">

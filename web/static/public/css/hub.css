@@ -581,3 +581,69 @@ body[data-page="hub"] { display: flow-root; }
 .stub.ext .ext-url { font-size: 10.5px; word-break: break-all; }
 .stub.ext code { font-family: var(--mono); color: var(--accent); }
 @media (prefers-reduced-motion: reduce) { .ol-ping { animation: none; outline: 2px solid var(--accent); } }
+
+/* ================================================== mk48: cards that fit --
+   Ten sections in one row left ~70-90 px of card for an Orbitron name, so the
+   landing view spilled words over the card edge and section view cut them to
+   "Informati...". Now: two balanced rows (the template sets .cols-N to half the
+   tile count), names wrap at spaces, and the name is sized from the card's own
+   width (cqi) so it shrinks with the card instead of leaving it. */
+/* 11 tiles = 6 + 5 */
+.cards.cols-1 { --cols: 1; }
+.cards.cols-2 { --cols: 2; }
+.cards.cols-3 { --cols: 3; }
+.cards.cols-4 { --cols: 4; }
+.cards.cols-5 { --cols: 5; }
+.cards.cols-6 { --cols: 6; }
+.cards.cols-7 { --cols: 7; }
+.cards.cols-8 { --cols: 8; }
+.cards.cols-9 { --cols: 9; }
+.cards.cols-10 { --cols: 10; }
+.cards { grid-template-columns: repeat(var(--cols, 5), minmax(0, 1fr)); }
+.card { container-type: inline-size; min-width: 0; }
+.card-glyph, .card-name { min-width: 0; max-width: 100%; overflow-wrap: anywhere; }
+.card-glyph { white-space: nowrap; overflow: hidden; text-overflow: clip; font-size: clamp(8px, 6.2cqi, 11px); }
+.card-name { font-size: clamp(9px, 9cqi, 17px); }
+
+.hub[data-state="screen"] .cards { grid-auto-flow: row; grid-auto-columns: auto;
+  grid-template-columns: repeat(var(--cols, 5), minmax(0, 1fr)); gap: 5px; }
+.hub[data-state="screen"] .card { min-height: 34px; padding: 4px 8px; }
+/* the glyph is on the side panel's head in this view; here it only costs a row */
+.hub[data-state="screen"] .card-glyph { display: none; }
+.hub[data-state="screen"] .card-name { white-space: normal; overflow: visible; text-overflow: clip;
+  font-size: clamp(8.5px, 8.6cqi, 11.5px); line-height: 1.12; }
+@media (max-width: 1100px) {
+  .hub[data-state="screen"] .cards { grid-template-columns: repeat(var(--cols, 5), minmax(0, 1fr)); }
+}
+@media (max-width: 760px) {
+  .cards, .hub[data-state="screen"] .cards { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+/* ============================================ mk48: a framed external page --
+   The NN genealogy sheet. mk49: the page is shown whole and scaled down, so
+   the frame is a fixed-size box on the left (hub.js sets its size and scale
+   from the height the sheet has) and the links sit in a column beside it. */
+#screen-body > .sheet[data-sheet="genealogy"]:not([hidden]),
+#screen-body > .sheet[data-sheet="code-truth"]:not([hidden]) { height: 100%; overflow: hidden; }
+.embed { height: 100%; min-height: 0; display: grid; grid-template-columns: auto minmax(0, 1fr);
+  gap: 18px; align-items: start; }
+.embed-view { position: relative; overflow: hidden; border: 1px solid var(--rule-hi);
+  border-radius: 9px; background: #000; width: 420px; height: 100%; }
+.embed-frame { display: block; border: 0; background: #000; color-scheme: dark;
+  transform-origin: 0 0; width: 100%; height: 100%; }
+.embed-bar { display: grid; gap: 10px; justify-items: start; align-content: start; max-width: 300px; }
+.embed-src { display: inline-flex; align-items: center; gap: 8px;
+  font-family: var(--mono); font-size: 11px; color: var(--ink-2); }
+.embed-url { font-family: var(--mono); font-size: 10.5px; color: var(--accent); overflow-wrap: anywhere; }
+.embed-lamp { flex: none; width: 7px; height: 7px; border-radius: 50%; background: var(--pass);
+  box-shadow: 0 0 8px var(--pass); }
+.embed-out { padding: 6px 11px; border-radius: 7px; border: 1px solid var(--rule-hi);
+  font-family: var(--display); font-size: 11px; font-weight: 700; letter-spacing: .08em;
+  color: var(--ink); text-decoration: none; white-space: nowrap; }
+.embed-out:hover, .embed-out:focus-visible { border-color: var(--accent); color: #fff;
+  box-shadow: 0 0 14px -6px var(--accent-glow); }
+.embed-note { margin: 4px 0 0; font-size: 11px; line-height: 1.5; color: var(--meta);
+  border-left: 2px solid var(--rule-hi); padding-left: 10px; }
+@media (max-width: 760px) {
+  .embed { grid-template-columns: minmax(0, 1fr); }
+}

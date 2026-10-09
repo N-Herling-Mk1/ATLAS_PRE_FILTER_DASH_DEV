@@ -28,6 +28,8 @@ TILES = [
     ("max-entropy", "Max Entropy", "maxent", "Least-committed distributions under the stated constraints."),
     ("forge", "Forge", "forge", "The posterior observatory and its runs."),
     ("features", "Features", "X", "The feature set itself: definitions, coverage, drift."),
+    ("genealogy", "NN Genealogy", "ΔX", "Version history of the MSVtx NN1 / NN2 input features, barrel and endcap, with per-selection downloads."),
+    ("code-truth", "Code Truth", "#", "AI-generated, human-reviewed, hash-sealed code units and the lineage between them."),
     ("models", "Models", "f(X)", "Trained models, their inputs, and their verdicts."),
     ("eda", "EDA Dashboard", "EDA", "Distributions, correlations and coverage across the prefilter inputs."),
     ("root2csv", "root2csv", "ROOT→CSV", "Scan and flatten ATLAS ROOT ntuples to CSV. Opens its front end or its repo."),
@@ -38,7 +40,37 @@ TILES = [
 EXTERNAL = {"root2csv": {
     "site": "https://n-herling-mk1.github.io/root_to_csv/",           # the front end (index.html, GitHub Pages)
     "repo": "https://github.com/N-Herling-Mk1/root_to_csv#readme",    # the repo, opened at its README
+}, "genealogy": {
+    # mk48: this one is embedded, not just linked -- the sheet frames `site`.
+    "site": "https://n-herling-mk1.github.io/atlas_nn_genealogy/",
+    "repo": "https://github.com/N-Herling-Mk1/atlas_nn_genealogy#readme",
+    # (hash, label, tag) for the side panel, newest first. The page builds its
+    # own tabs from its registry; this list is only the dashboard's shortcuts,
+    # so add a line here when a new mk lands there.
+    # mk49: the page's full size in CSS px (width it lays out at, height of
+    # the timeline). The sheet scales the frame down from this so the whole
+    # timeline shows without scrolling. Raise "h" when the timeline grows.
+    "size": {"w": 1160, "h": 1200},
+    "views": [("", "Timeline", "all"), ("mk4", "mk4", "Sep 2026"),
+              ("mk3", "mk3", "Jul 2026"), ("mk2", "mk2", "Jun 2026")],
+}, "code-truth": {
+    # mk51: same treatment as genealogy -- framed whole, scaled to fit.
+    "site": "https://n-herling-mk1.github.io/code_truth_genealogy/",
+    "repo": "https://github.com/N-Herling-Mk1/code_truth_genealogy#readme",
+    "title": "Code Truth Genealogy",
+    # "h" is an ESTIMATE (the page could not be measured when this was written).
+    # Measure it: open the site, F12 console, document.documentElement.scrollHeight.
+    "size": {"w": 1160, "h": 1400},
+    # unit ids are the page's own hashes (its data.js), newest lineage first
+    "views": [("", "Timeline", "all"), ("dncn_qn_mk1", "dncn_qn_mk1", "sealed"),
+              ("dnc_flr_mk1", "dnc_flr_mk1", "exp"), ("disco_mk1", "disco_mk1", "sealed"),
+              ("bce_mlp_mk1", "bce_mlp_mk1", "sealed")],
 }}
+EXTERNAL["genealogy"]["title"] = "NN Feature Genealogy"
+
+# The only places this site may put in a frame. app.py turns this into the
+# Content-Security-Policy frame-src; anything not listed stays blocked.
+EMBED_SRC = (EXTERNAL["genealogy"]["site"], EXTERNAL["code-truth"]["site"])
 
 # Images the TV will not show: these are user-interface assets that happen to
 # live in the same folder. Everything else in assets/images gets a turn.

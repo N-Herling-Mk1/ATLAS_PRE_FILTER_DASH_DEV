@@ -234,18 +234,35 @@ def test_hub_side_panel_and_root2csv(app_pw):
     assert 'rel="noopener noreferrer"' in html
 
 
-def test_social_card_is_public(app_pw):
-    """Link-preview crawlers cannot sign in: the tags must be on /login and the image must load without a session."""
-    app, _ = app_pw
+def test_hub_frames_genealogy_and_nothing_else(app_pw):
+    """mk48: the NN genealogy tile frames its GitHub Pages site. frame-src names
+    that one URL on the hub and is 'none' on every other route; the cards carry
+    the two-row column class the CSS reads."""
+    from server.pages import EMBED_SRC, EXTERNAL, TILES
+    app, pw = app_pw
     c = app.test_client()
-    html = c.get("/login").get_data(as_text=True)
-    m = re.search(r'<meta property="og:image" content="https://[^/"]+(/[^"]+)"', html)
-    assert m, "og:image missing from the login page"
-    assert 'name="twitter:card" content="summary_large_image"' in html
-    path = m.group(1)
-    assert path.startswith("/static/public/"), "card image must sit under the public static prefix"
-    r = c.get(path)
-    assert r.status_code == 200 and r.mimetype == "image/png"
-    assert r.data[:8] == b"\x89PNG\r\n\x1a\n"
-    w, h = int.from_bytes(r.data[16:20], "big"), int.from_bytes(r.data[20:24], "big")
-    assert (w, h) == (1200, 630)
+    gen = EXTERNAL["genealogy"]
+    assert gen["site"] == "https://n-herling-mk1.github.io/atlas_nn_genealogy/"
+    ct = EXTERNAL["code-truth"]
+    assert ct["site"] == "https://n-herling-mk1.github.io/code_truth_genealogy/"
+    assert EMBED_SRC == (gen["site"], ct["site"])
+    assert "frame-src 'none'" in c.get("/login").headers["Content-Security-Policy"]
+    _login(c, pw)
+    r = c.get("/")
+    html = r.get_data(as_text=True)
+    assert f"frame-src {gen['site']} {ct['site']}" in r.headers["Content-Security-Policy"]
+    assert r.headers["X-Frame-Options"] == "DENY"          # we still cannot BE framed
+    assert "frame-src 'none'" in c.get("/board").headers["Content-Security-Policy"]
+    assert 'data-sheet="genealogy"' in html and 'data-outline="genealogy"' in html
+    # mk51: both framed pages come from one partial, keyed by tile id
+    for key in ("genealogy", "code-truth"):
+        x = EXTERNAL[key]
+        assert f'data-sheet="{key}"' in html and f'data-outline="{key}"' in html
+        assert f'<iframe class="embed-frame" id="{key}-frame" name="{key}-frame"' in html
+        assert f'src="{x["site"]}" loading="lazy"' in html and "sandbox=" in html
+        # mk49: the frame declares the page's full size; hub.js scales it to fit
+        assert f'data-vw="{x["size"]["w"]}" data-vh="{x["size"]["h"]}"' in html
+        for h, _, _ in x["views"]:
+            assert f'href="{x["site"]}#{h}" target="{key}-frame"' in html, (key, h)
+    assert f'class="cards cols-{(len(TILES) + 1) // 2}"' in html
+    assert "style=" not in html                             # style-src 'self': no inline styles

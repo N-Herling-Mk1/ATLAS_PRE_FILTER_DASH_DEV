@@ -1,0 +1,22 @@
+{# A framed external page, shown whole and scaled to fit (mk49; shared since
+   mk51). The caller sets `key`; URLs, title and the page's full size come from
+   pages.EXTERNAL[key]. The frame is allowed by the frame-src that app.py
+   builds from pages.EMBED_SRC, and hub.js scales it. Nothing is copied from
+   the other repo, so what shows is always what that repo last built. #}
+{% set x = external[key] %}
+<div class="embed">
+  <div class="embed-view">
+    <iframe class="embed-frame" id="{{ key }}-frame" name="{{ key }}-frame" title="{{ x.title }}"
+            src="{{ x.site }}" loading="lazy" referrerpolicy="no-referrer"
+            data-vw="{{ x.size.w }}" data-vh="{{ x.size.h }}"
+            sandbox="allow-scripts allow-same-origin allow-downloads allow-popups allow-popups-to-escape-sandbox"></iframe>
+  </div>
+  <div class="embed-bar">
+    <span class="embed-src"><i class="embed-lamp" aria-hidden="true"></i>live from</span>
+    <code class="embed-url">{{ x.site }}</code>
+    <a class="embed-out" id="{{ key }}-site" href="{{ x.site }}" target="_blank" rel="noopener noreferrer">Open full size &#8599;</a>
+    <a class="embed-out" id="{{ key }}-repo" href="{{ x.repo }}" target="_blank" rel="noopener noreferrer">Repository &#8599;</a>
+    <p class="embed-note">Shown whole and scaled to fit; it is live, so the tabs and downloads work here.
+      Pages longer than the timeline scroll inside the frame.</p>
+  </div>
+</div>

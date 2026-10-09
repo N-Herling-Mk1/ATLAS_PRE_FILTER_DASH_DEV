@@ -11,9 +11,15 @@
 
    API
      const fx = Traces.attach(hostEl);      // hostEl must be position:relative
-     fx.fire(rect, {bleed, color, hot, inward});
+     fx.fire(rect, {bleed, color, hot, inward, tracks, grow, glare});
        inward: tracks run INTO the rect and write across it, instead of
        sprawling out of its edge into the bleed.
+       tracks: false -- mk49: no circuit tracks at all, only the green glare
+               off the box's four sides (the buttons use this).
+       grow:   mk49: inflate the rect by this fraction of its size per side
+               before drawing, clamped to the host (the section segue).
+       glare:  mk49: gain on the glare's brightness (1 = as before); above 1
+               it also lays a horizontal and a vertical streak through the box.
      fx.clear();
 
    The canvas covers the host, not the source, so the source is free to move,
@@ -239,7 +245,8 @@
              stopped moving exactly when it should have been furthest out. */
           const far = Math.max(24, room * 0.95);
           const reach = 14 + (far - 14) * haze;
-          const a0 = 0.34 * haze;
+          const gain = opt.glare || 1;
+          const a0 = Math.min(0.85, 0.34 * haze * gain);
           const band = (x, y, w, h, gx0, gy0, gx1, gy1) => {
             const gr = g.createLinearGradient(gx0, gy0, gx1, gy1);
             gr.addColorStop(0, `rgba(${col},${a0.toFixed(3)})`);
@@ -254,11 +261,32 @@
           band(x - reach, y, reach, h, x, 0, x - reach, 0);                 // left
           band(x + w, y, reach, h, x + w, 0, x + w + reach, 0);             // right
 
+          /* mk49, gain > 1 only: one horizontal and one vertical streak through
+             the box's centre, running past the bands. Each is two gradients
+             back to back so it is brightest at the box edge and gone at its
+             tip; thin, so it reads as glare along an axis, not as a fill. */
+          if (gain > 1) {
+            const cx = x + w / 2, cy = y + h / 2;
+            const run = reach * 1.9, th = Math.max(3, Math.min(w, h) * 0.05);
+            const as = Math.min(0.9, 0.5 * haze * gain);
+            const streak = (sx, sy, sw, sh, g0x, g0y, g1x, g1y) => {
+              const gr = g.createLinearGradient(g0x, g0y, g1x, g1y);
+              gr.addColorStop(0, `rgba(224,255,236,${as.toFixed(3)})`);
+              gr.addColorStop(0.25, `rgba(${col},${(as * 0.55).toFixed(3)})`);
+              gr.addColorStop(1, `rgba(${col},0)`);
+              g.fillStyle = gr; g.fillRect(sx, sy, sw, sh);
+            };
+            streak(x - run, cy - th / 2, run, th, x, 0, x - run, 0);
+            streak(x + w, cy - th / 2, run, th, x + w, 0, x + w + run, 0);
+            streak(cx - th / 2, y - run, th, run, 0, y, 0, y - run);
+            streak(cx - th / 2, y + h, th, run, 0, y + h, 0, y + h + run);
+          }
+
           // and the edge itself, so the box keeps a hard boundary to push from
           const ring = (inset, width, blur, sa, ga) => {
             g.lineWidth = width;
-            g.shadowBlur = blur; g.shadowColor = `rgba(${col},${(ga * haze).toFixed(3)})`;
-            g.strokeStyle = `rgba(${col},${(sa * haze).toFixed(3)})`;
+            g.shadowBlur = blur; g.shadowColor = `rgba(${col},${Math.min(1, ga * haze * gain).toFixed(3)})`;
+            g.strokeStyle = `rgba(${col},${Math.min(1, sa * haze * gain).toFixed(3)})`;
             g.strokeRect(x - inset + 0.5, y - inset + 0.5, w + inset * 2 - 1, h + inset * 2 - 1);
           };
           g.shadowBlur = 16; g.shadowColor = `rgba(${col},${(0.9 * haze).toFixed(3)})`;
@@ -276,8 +304,17 @@
       fire(r, o) {
         if (reduce || !r || !r.w) return;
         opt = o || {};
+        if (opt.grow) {
+          // inflate about the centre, then keep the box inside the host
+          const hb = host.getBoundingClientRect(), m = 8;
+          const gx = r.w * opt.grow, gy = r.h * opt.grow;
+          const x0 = Math.max(m, r.x - gx), y0 = Math.max(m, r.y - gy);
+          const x1 = Math.min(hb.width - m, r.x + r.w + gx), y1 = Math.min(hb.height - m, r.y + r.h + gy);
+          if (x1 - x0 > 20 && y1 - y0 > 20) r = {x: x0, y: y0, w: x1 - x0, h: y1 - y0};
+        }
         rect = r;
-        build(r, opt.bleed || 72, !!opt.inward);
+        if (opt.tracks === false) tracks = [];
+        else build(r, opt.bleed || 72, !!opt.inward);
         endAt = performance.now() + T_OUT + T_HOLD + T_BACK + 90;
         cv.classList.add("run");
         if (!raf) raf = requestAnimationFrame(frame);

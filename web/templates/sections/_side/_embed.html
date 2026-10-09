@@ -1,0 +1,22 @@
+{# Outline for a framed page (mk48; shared since mk51). The views steer the
+   frame (target = its name), so a click changes the page inside the sheet
+   without leaving the dashboard. The caller sets `key`. #}
+{% set x = external[key] %}
+<ol class="ol-layers">
+  <li class="ol-layer">
+    <div class="ol-lh"><span class="ol-n">V</span><b>Views</b></div>
+    <ul class="ol-items">
+      {% for hash, label, tag in x.views %}
+      <li><a href="{{ x.site }}#{{ hash }}" target="{{ key }}-frame"><span>{{ label }}</span><i class="st st-{{ 'partial' if tag == 'exp' else 'sheet' }}">{{ tag }}</i></a></li>
+      {% endfor %}
+    </ul>
+  </li>
+  <li class="ol-layer">
+    <div class="ol-lh"><span class="ol-n">&#8599;</span><b>Open</b></div>
+    <ul class="ol-items">
+      <li><a href="{{ x.site }}" target="_blank" rel="noopener noreferrer"><span>1 · Page, new tab</span><i class="st st-sheet">site</i></a></li>
+      <li><a href="{{ x.repo }}" target="_blank" rel="noopener noreferrer"><span>2 · Repo / README</span><i class="st st-sheet">github</i></a></li>
+    </ul>
+  </li>
+</ol>
+<p class="ol-note">Downloads are made inside the framed page.</p>

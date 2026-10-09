@@ -60,9 +60,26 @@ def main():
         sys.exit(f"[serve] cannot start: {e}")
     cfg = app.extensions["pfd"]["cfg"]
 
-    app_port = LIVE_PORT if a.mode == "live" else free_port(5710)
+    # mk50: in dev mode Flask's reloader runs this file twice -- a parent that
+    # binds the port and a child that serves on the parent's socket. The child
+    # must not pick a port again: 5710 is held by its own parent, so it used to
+    # report (and open a browser tab on) 5711, where nothing listens. The parent
+    # chooses once and hands the port down; the child prints nothing and opens
+    # nothing.
+    reload_child = a.mode == "dev" and os.environ.get("WERKZEUG_RUN_MAIN") == "true"
+    if reload_child and os.environ.get("PFD_DEV_PORT", "").isdigit():
+        app_port = int(os.environ["PFD_DEV_PORT"])
+    else:
+        app_port = LIVE_PORT if a.mode == "live" else free_port(5710)
+        if a.mode == "dev":
+            os.environ["PFD_DEV_PORT"] = str(app_port)
     edge_port = free_port(8710) if a.mode == "parity" else None
     url = f"http://127.0.0.1:{edge_port or app_port}/"
+
+    if reload_child:
+        print(f"[serve] reloader child up, serving {url}", flush=True)
+        app.run(host="127.0.0.1", port=app_port, debug=True, use_reloader=True, threaded=True)
+        return
 
     print("=" * 72)
     print(f"  ATLAS_PRE_FILTER_DASH  mode={a.mode}")
