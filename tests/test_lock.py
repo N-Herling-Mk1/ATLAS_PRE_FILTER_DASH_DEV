@@ -232,3 +232,20 @@ def test_hub_side_panel_and_root2csv(app_pw):
     assert r2c["repo"].startswith("https://github.com/N-Herling-Mk1/root_to_csv")
     assert f'href="{r2c["site"]}"' in html and f'href="{r2c["repo"]}"' in html
     assert 'rel="noopener noreferrer"' in html
+
+
+def test_social_card_is_public(app_pw):
+    """Link-preview crawlers cannot sign in: the tags must be on /login and the image must load without a session."""
+    app, _ = app_pw
+    c = app.test_client()
+    html = c.get("/login").get_data(as_text=True)
+    m = re.search(r'<meta property="og:image" content="https://[^/"]+(/[^"]+)"', html)
+    assert m, "og:image missing from the login page"
+    assert 'name="twitter:card" content="summary_large_image"' in html
+    path = m.group(1)
+    assert path.startswith("/static/public/"), "card image must sit under the public static prefix"
+    r = c.get(path)
+    assert r.status_code == 200 and r.mimetype == "image/png"
+    assert r.data[:8] == b"\x89PNG\r\n\x1a\n"
+    w, h = int.from_bytes(r.data[16:20], "big"), int.from_bytes(r.data[20:24], "big")
+    assert (w, h) == (1200, 630)
